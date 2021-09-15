@@ -7,6 +7,7 @@ import data
 import model
 
 wandb.login()
+wandb.init(project='scaling-resnets', entity='lpsm-deep')
 
 train_dl, test_dl = data.mnist()
 
