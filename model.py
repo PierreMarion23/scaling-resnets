@@ -4,38 +4,76 @@ import torch
 from torch import nn
 
 
+# This is useful to fix the random seed for linear layer initialization.
+# TODO: clean this up.
+def create_linear_layer(in_features, out_features, generator):
+    layer = nn.Linear(in_features, out_features)
+    k = 1 / torch.sqrt(torch.Tensor([in_features]))
+    layer.weight = nn.Parameter(2 * k * torch.rand((out_features, in_features), generator=generator) - k)
+    layer.bias = nn.Parameter(2 * k * torch.rand((out_features,), generator=generator) - k)
+    return layer
+
+
 class ResNet(pl.LightningModule):
     def __init__(self, initial_width,
-                 width, depth, final_depth, activation, train_init=True, train_final=True):
+                 width, depth, final_width, activation, 
+                 train_init=True, train_final=True, test_dl=None):
         super().__init__()
-        self.init = nn.Linear(initial_width, width)
+        self.generator = torch.Generator()
+        self.generator.manual_seed(0)
+
+        self.initial_width = initial_width
+        self.width = width
+        self.depth = depth
+        self.final_width = final_width
+        self.activation = activation
+        self.train_init = train_init
+        self.train_final = train_final
+        self.test_dl = test_dl
+
+        self.init = create_linear_layer(self.initial_width, self.width, self.generator)
         if not train_init:
             self.init.weight.requires_grad = False
             self.init.bias.requires_grad = False
         self.layers = nn.Sequential(
             *[nn.Linear(width, width) for _ in range(depth)])
-        self.depth = depth
-        self.activation = activation
-        self.final = nn.Linear(width, final_depth)
+        self.final = create_linear_layer(self.width, self.final_width, self.generator)
         if not train_final:
             self.final.weight.requires_grad = False
             self.final.bias.requires_grad = False
+
         self.loss = nn.CrossEntropyLoss()
 
     def forward(self, x):
-        hidden_state = self.init(x.reshape(-1, 28*28))
-        for i in range(self.depth):
-            hidden_state = hidden_state + self.layers[i](self.activation(hidden_state)) / self.depth
+        hidden_state = self.init(x)
+        for k in range(self.depth):
+            hidden_state = hidden_state + self.layers[k](self.activation(hidden_state)) / self.depth
         return self.final(hidden_state)
 
     def training_step(self, batch, batch_no):
+        self.train()
         data, target = batch
         logits = self(data)
         loss = self.loss(logits, target)
+        self.log("train/loss", loss, on_step=True, on_epoch=True)
         return loss
 
     def configure_optimizers(self):
         return torch.optim.RMSprop(filter(lambda p: p.requires_grad, self.parameters()), lr=0.005)
+
+    # TODO: replace this function with a standard one (using state_dict).
+    def copy(self):
+        result = ResNet(self.initial_width, self.width, self.depth,
+                        self.final_width, self.activation, self.train_init,
+                        self.train_final, self.test_dl)
+        result.init.weight = nn.Parameter(self.init.weight.detach().clone())
+        result.init.bias = nn.Parameter(self.init.bias.detach().clone())
+        for k in range(self.depth):
+            result.layers[k].weight = nn.Parameter(self.layers[k].weight.detach().clone())
+            result.layers[k].bias = nn.Parameter(self.layers[k].bias.detach().clone())
+        result.final.weight = nn.Parameter(self.final.weight.detach().clone())
+        result.final.bias = nn.Parameter(self.final.bias.detach().clone())
+        return result
 
 
 def polyfit(series, degree):
