@@ -1,5 +1,5 @@
 __pycache__/
 .vscode/
 .ipynb_checkpoints
-mnist/
+datasets/
 wandb
