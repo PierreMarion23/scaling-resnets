@@ -4,6 +4,7 @@ import pytorch_lightning as pl
 import torch
 import wandb
 
+import config
 import logs
 import data
 import model
@@ -12,22 +13,16 @@ import model
 wandb.login()
 wandb.init(project='scaling-resnets', entity='lpsm-deep')
 
-# datasets = {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
-train_dl, test_dl, data_size, nb_classes = data.load_dataset('MNIST')
+train_dl, test_dl, data_size, nb_classes = data.load_dataset(config.standard_config['dataset'])
 
-width = 30
-depth = 200
-resnet = model.ResNet(data_size, width, depth, nb_classes, torch.nn.ReLU(), test_dl=test_dl)
+resnet = model.ResNet(initial_width=data_size, final_width=nb_classes, **config.standard_config['model'], test_dl=test_dl)
 
-if torch.cuda.is_available():
-    gpu = 1
-else:
-    gpu = 0
+gpu = 1 if torch.cuda.is_available() else 0
 
 wandb_logger = pl.loggers.WandbLogger()
 trainer = pl.Trainer(
     gpus=gpu,
-    max_epochs=30,
+    max_epochs=config.standard_config['epochs'],
     progress_bar_refresh_rate=20,
     logger=wandb_logger,
     callbacks=[logs.PrintingCallback()],
