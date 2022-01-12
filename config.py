@@ -7,8 +7,8 @@ standard = {
         'initialization_noise': 1,         # Initialization noise as a fraction of the default noise
         'batch_norm': False,
         'skip_connection': True,
-        'train_init': False,
-        'train_final': False
+        'train_init': True,
+        'train_final': True
     },
     'epochs': 30
 }
@@ -22,8 +22,8 @@ debug = {
         'initialization_noise': 1,         # Initialization noise as a fraction of the default noise
         'batch_norm': False,
         'skip_connection': True,
-        'train_init': False,
-        'train_final': False
+        'train_init': True,
+        'train_final': True
     },
     'epochs': 2
 }
