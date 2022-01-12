@@ -3,7 +3,7 @@ import torch
 
 
 def get_prediction(data, model: pl.LightningModule):
-    model.eval() # prepares model for predicting
+    model.eval() # Deactivates gradient graph construction during eval.
     probabilities = torch.softmax(model(data), dim=1)
     predicted_class = torch.argmax(probabilities, dim=1)
     return predicted_class, probabilities

@@ -6,20 +6,17 @@ from torch import nn
 
 # This is useful to fix the random seed for linear layer initialization.
 # TODO: clean this up.
-def create_linear_layer(in_features, out_features, generator):
+def create_linear_layer(in_features, out_features):
     layer = nn.Linear(in_features, out_features)
     k = 1 / torch.sqrt(torch.Tensor([in_features]))
-    layer.weight = nn.Parameter(2 * k * torch.rand((out_features, in_features), generator=generator) - k)
-    layer.bias = nn.Parameter(2 * k * torch.rand((out_features,), generator=generator) - k)
+    layer.weight = nn.Parameter(2 * k * torch.rand((out_features, in_features)) - k)
+    layer.bias = nn.Parameter(2 * k * torch.rand((out_features,)) - k)
     return layer
 
 
 class ResNet(pl.LightningModule):
-    def __init__(self, initial_width, final_width, test_dl=None,
-                 **model_config):
+    def __init__(self, initial_width, final_width, **model_config):
         super().__init__()
-        self.generator = torch.Generator()
-        self.generator.manual_seed(0)
 
         self.initial_width = initial_width
         self.final_width = final_width
@@ -29,15 +26,14 @@ class ResNet(pl.LightningModule):
         self.activation = getattr(nn, model_config['activation'])()  # e.g. torch.nn.ReLU()
         self.train_init = model_config['train_init']
         self.train_final = model_config['train_final']
-        self.test_dl = test_dl
 
-        self.init = create_linear_layer(self.initial_width, self.width, self.generator)
+        self.init = create_linear_layer(self.initial_width, self.width)
         if not self.train_init:
             self.init.weight.requires_grad = False
             self.init.bias.requires_grad = False
         self.layers = nn.Sequential(
             *[nn.Linear(self.width, self.width) for _ in range(self.depth)])
-        self.final = create_linear_layer(self.width, self.final_width, self.generator)
+        self.final = create_linear_layer(self.width, self.final_width)
         if not self.train_final:
             self.final.weight.requires_grad = False
             self.final.bias.requires_grad = False
@@ -63,8 +59,7 @@ class ResNet(pl.LightningModule):
 
     # TODO: replace this function with a standard one (using state_dict).
     def copy(self):
-        result = ResNet(self.initial_width, self.final_width, self.test_dl,
-                        **self._model_config)
+        result = ResNet(self.initial_width, self.final_width, **self._model_config)
         result.init.weight = nn.Parameter(self.init.weight.detach().clone())
         result.init.bias = nn.Parameter(self.init.bias.detach().clone())
         for k in range(self.depth):

@@ -8,6 +8,10 @@ import utils
 
 
 class PrintingCallback(Callback):
+    def __init__(self, test_dl):
+        super().__init__()
+        self.test_dl = test_dl
+
     # See https://github.com/PyTorchLightning/pytorch-lightning/issues/5238#issuecomment-750351799
     def on_after_backward(self, trainer, pl_module):
         logging_depths = [0,
@@ -34,7 +38,7 @@ class PrintingCallback(Callback):
     def on_epoch_end(self, trainer, pl_module):
         # Log test accuracy
         true_targets, predictions = utils.get_true_targets_predictions(
-            pl_module.test_dl, pl_module)
+            self.test_dl, pl_module)
         accuracy = np.mean(np.array(true_targets) == np.array(predictions))
         pl_module.logger.experiment.log(
             {"test/accuracy/true": accuracy, "global_step": trainer.global_step})
@@ -48,7 +52,7 @@ class PrintingCallback(Callback):
             new_weights[k].bias = torch.nn.Parameter(
                 torch.zeros((pl_module.width,)))
         true_targets, predictions = utils.get_true_targets_predictions(
-            denoised_model.test_dl, denoised_model)
+            self.test_dl, denoised_model)
         accuracy = np.mean(np.array(true_targets) == np.array(predictions))
         pl_module.logger.experiment.log(
             {"test/accuracy/zeroed": accuracy, "global_step": trainer.global_step})
@@ -86,7 +90,7 @@ class PrintingCallback(Callback):
                 new_weights[k].bias = torch.nn.Parameter(
                     torch.Tensor(denoised_bias[k]))
             true_targets, predictions = utils.get_true_targets_predictions(
-                denoised_model.test_dl, denoised_model)
+                self.test_dl, denoised_model)
             accuracy = np.mean(np.array(true_targets) == np.array(predictions))
             pl_module.logger.experiment.log({
                 "test/accuracy/degree-" + str(degree): accuracy,
