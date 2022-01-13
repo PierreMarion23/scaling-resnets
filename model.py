@@ -6,6 +6,15 @@ import torch
 from torch import nn
 
 
+def create_linear_layer(in_features, out_features, noise_mult=1):
+    # Linear layers are initalized with a symmetric uniform distribution, hence the noise level can be scaled as follows.
+    layer = nn.Linear(in_features, out_features)
+    k = 1 / torch.sqrt(torch.Tensor([in_features])) * noise_mult
+    layer.weight = nn.Parameter(2 * k * torch.rand((out_features, in_features)) - k)
+    layer.bias = nn.Parameter(2 * k * torch.rand((out_features,)) - k)
+    return layer
+
+
 class ResNet(pl.LightningModule):
     def __init__(self, initial_width, final_width, **model_config):
         super().__init__()
@@ -19,13 +28,17 @@ class ResNet(pl.LightningModule):
         self.train_init = model_config['train_init']
         self.train_final = model_config['train_final']
 
-        self.init = nn.Linear(self.initial_width, self.width)
+        self.init = create_linear_layer(self.initial_width, self.width, model_config['init_final_initialization_noise'])
+
         if not self.train_init:
             self.init.weight.requires_grad = False
             self.init.bias.requires_grad = False
         self.layers = nn.Sequential(
-            *[nn.Linear(self.width, self.width) for _ in range(self.depth)])
-        self.final = nn.Linear(self.width, self.final_width)
+            *[create_linear_layer(self.width, self.width, model_config['layers_initialization_noise']) for _ in range(self.depth)])
+        if self._model_config['batch_norm']:
+            self.batch_norms = nn.Sequential(
+                *[nn.BatchNorm1d(self.width) for _ in range(self.depth)])
+        self.final = create_linear_layer(self.width, self.final_width, model_config['init_final_initialization_noise'])
         if not self.train_final:
             self.final.weight.requires_grad = False
             self.final.bias.requires_grad = False
@@ -35,7 +48,14 @@ class ResNet(pl.LightningModule):
     def forward(self, x):
         hidden_state = self.init(x)
         for k in range(self.depth):
-            hidden_state = hidden_state + self.layers[k](self.activation(hidden_state)) / self.depth
+            if self._model_config['batch_norm']:
+                normed_hidden_state = self.batch_norms[k](hidden_state)
+            else:
+                normed_hidden_state = hidden_state
+            if self._model_config['skip_connection']:
+                hidden_state = hidden_state + self.layers[k](self.activation(normed_hidden_state)) / self.depth
+            else:
+                hidden_state = self.layers[k](self.activation(hidden_state))
         return self.final(hidden_state)
 
     def training_step(self, batch, batch_no):
