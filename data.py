@@ -27,11 +27,8 @@ def load_dataset(name):
         os.path.join("datasets", name), download=True, transform=transform_img_to_vect, **train_arg)
     test_ds = dataset_class(
         os.path.join("datasets", name), download=True, transform=transform_img_to_vect, **test_arg)
-    # This freezes the seed for the dataloader.
-    generator = torch.Generator()
-    generator.manual_seed(0)
     train_dl = torch.utils.data.DataLoader(
-        train_ds, batch_size=128, shuffle=True, num_workers=0, generator=generator)
+        train_ds, batch_size=128, shuffle=True, num_workers=0)
     test_dl = torch.utils.data.DataLoader(test_ds, batch_size=64)
     size = np.prod(np.array(train_ds.data[0].shape))
     nb_classes = len(np.unique(train_ds.labels)) if name == 'SVHN' else len(train_ds.classes)
