@@ -8,9 +8,10 @@ import utils
 
 
 class PrintingCallback(Callback):
-    def __init__(self, test_dl):
+    def __init__(self, test_dl, device):
         super().__init__()
         self.test_dl = test_dl
+        self.device = device
 
     # See https://github.com/PyTorchLightning/pytorch-lightning/issues/5238#issuecomment-750351799
     def on_after_backward(self, trainer, pl_module):
@@ -38,10 +39,13 @@ class PrintingCallback(Callback):
     def on_epoch_end(self, trainer, pl_module):
         # Log test accuracy
         true_targets, predictions = utils.get_true_targets_predictions(
-            self.test_dl, pl_module)
+            self.test_dl, pl_module, self.device)
         accuracy = np.mean(np.array(true_targets) == np.array(predictions))
+        loss = utils.get_eval_loss(self.test_dl, pl_module, self.device)
         pl_module.logger.experiment.log(
             {"test/accuracy/true": accuracy, "global_step": trainer.global_step})
+        pl_module.logger.experiment.log(
+            {"test/loss/true": loss, "global_step": trainer.global_step})
 
         # Log test accuracy when the ODE is replaced by identity.
         denoised_model = pl_module.copy()
@@ -52,7 +56,7 @@ class PrintingCallback(Callback):
             new_weights[k].bias = torch.nn.Parameter(
                 torch.zeros((pl_module.width,)))
         true_targets, predictions = utils.get_true_targets_predictions(
-            self.test_dl, denoised_model)
+            self.test_dl, denoised_model, self.device)
         accuracy = np.mean(np.array(true_targets) == np.array(predictions))
         pl_module.logger.experiment.log(
             {"test/accuracy/zeroed": accuracy, "global_step": trainer.global_step})
@@ -90,7 +94,7 @@ class PrintingCallback(Callback):
                 new_weights[k].bias = torch.nn.Parameter(
                     torch.Tensor(denoised_bias[k]))
             true_targets, predictions = utils.get_true_targets_predictions(
-                self.test_dl, denoised_model)
+                self.test_dl, denoised_model, self.device)
             accuracy = np.mean(np.array(true_targets) == np.array(predictions))
             pl_module.logger.experiment.log({
                 "test/accuracy/degree-" + str(degree): accuracy,
