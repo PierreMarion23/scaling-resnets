@@ -119,7 +119,7 @@ high_depth = {
 
 no_skip_connection = {
     'name': 'dataset-no-skip',
-    'dataset': 'MNIST',                    # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
+    'dataset': ['MNIST'],                    # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
     'model': {
         'width': 30,
         'depth': 4,
@@ -136,7 +136,7 @@ no_skip_connection = {
 
 debug = {
     'name': 'debug',
-    'dataset': 'MNIST',                    # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
+    'dataset': ['MNIST'],                    # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
     'model': {
         'width': 30,
         'depth': 200,

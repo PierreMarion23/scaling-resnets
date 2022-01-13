@@ -47,10 +47,12 @@ def fit(config_name, offline):
             trainer.fit(resnet, train_dl)
 
             model_artifact = wandb.Artifact('resnet', type='model', metadata=config_dict)
-            model_artifact.aliases.append(name)
             with model_artifact.new_file("trained-model.ckpt", mode="wb") as file:
                 torch.save(resnet, file)
             run.log_artifact(model_artifact)
+            model_artifact.wait()
+            model_artifact.aliases.append(name)
+            model_artifact.save()
 
 
 if __name__ == '__main__':
