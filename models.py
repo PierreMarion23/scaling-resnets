@@ -1,9 +1,11 @@
 import copy
+from typing import Callable
 
 import numpy as np
 import pytorch_lightning as pl
 import torch
 from torch import nn
+from torch import Tensor
 
 
 def create_linear_layer(in_features, out_features, noise_mult=1):
@@ -15,11 +17,12 @@ def create_linear_layer(in_features, out_features, noise_mult=1):
     return layer
 
 
-class ResNet(pl.LightningModule):
-    def __init__(self, initial_width, final_width, **model_config):
+# TODO: create a parent class for common methods between both models.
+class FCResNet(pl.LightningModule):
+    def __init__(self, first_coord, final_width, **model_config):
         super().__init__()
 
-        self.initial_width = initial_width
+        self.initial_width = first_coord
         self.final_width = final_width
         self._model_config = model_config
         self.width = model_config['width']
@@ -70,7 +73,93 @@ class ResNet(pl.LightningModule):
         return torch.optim.RMSprop(filter(lambda p: p.requires_grad, self.parameters()), lr=0.005)
 
     def copy(self):
-        result = ResNet(self.initial_width, self.final_width, **self._model_config)
+        result = FCResNet(self.initial_width, self.final_width, **self._model_config)
+        result.load_state_dict(copy.deepcopy(self.state_dict()))
+        return result
+
+
+def conv3x3(in_planes: int, out_planes: int) -> nn.Conv2d:
+    """3x3 convolution with padding"""
+    return nn.Conv2d(
+        in_planes,
+        out_planes,
+        kernel_size=3,
+        padding=1,
+        bias=False,
+    )
+
+
+class BasicBlock(pl.LightningModule):
+    def __init__(
+        self,
+        channels: int,
+        norm_layer: Callable[..., nn.Module],
+        depth: int
+    ) -> None:
+        super().__init__()
+        self.bn1 = norm_layer(channels)
+        self.conv1 = conv3x3(channels, channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.depth = depth
+
+    def forward(self, x: Tensor) -> Tensor:
+        out = self.bn1(x)
+        out = self.relu(out)
+        out = self.conv1(out)
+        out = x + out / self.depth
+        return out
+
+
+class ConvResNet(pl.LightningModule):
+    def __init__(self, first_coord, final_width, **model_config) -> None:
+        super().__init__()
+        self._norm_layer = nn.BatchNorm2d
+
+        self.channels = model_config['channels']
+        self.depth = model_config['depth']
+
+        self.conv1 = nn.Conv2d(first_coord, self.channels, kernel_size=7, stride=2, padding=3, bias=False)
+        self.bn1 = self._norm_layer(self.channels)
+        self.relu = nn.ReLU(inplace=True)
+        self.maxpool = nn.MaxPool2d(kernel_size=3, stride=2, padding=1)
+
+        self.layers = nn.Sequential(*[BasicBlock(self.channels, self._norm_layer, self.depth) for _ in range(self.depth)])
+        self.avgpool = nn.AdaptiveAvgPool2d((1, 1))
+        self.fc = nn.Linear(self.channels, final_width)
+
+        for m in self.modules():
+            if isinstance(m, nn.Conv2d):
+                nn.init.kaiming_normal_(m.weight, mode="fan_out", nonlinearity="relu")
+            elif isinstance(m, nn.BatchNorm2d):
+                nn.init.constant_(m.weight, 1)
+                nn.init.constant_(m.bias, 0)
+
+        self.loss = nn.CrossEntropyLoss()
+
+    def forward(self, x: Tensor) -> Tensor:
+        x = self.conv1(x)
+        x = self.bn1(x)
+        x = self.relu(x)
+        x = self.maxpool(x)
+        x = self.layers(x)
+        x = self.avgpool(x)
+        x = torch.flatten(x, 1)
+        x = self.fc(x)
+        return x
+
+    def training_step(self, batch, batch_no):
+        self.train()
+        data, target = batch
+        logits = self(data)
+        loss = self.loss(logits, target)
+        self.log("train/loss", loss, on_step=True, on_epoch=True)
+        return loss
+
+    def configure_optimizers(self):
+        return torch.optim.RMSprop(filter(lambda p: p.requires_grad, self.parameters()), lr=0.005)
+
+    def copy(self):
+        result = FCResNet(self.initial_width, self.final_width, **self._model_config)
         result.load_state_dict(copy.deepcopy(self.state_dict()))
         return result
 

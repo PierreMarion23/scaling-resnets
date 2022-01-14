@@ -15,8 +15,11 @@ class ReshapeTransform:
         return torch.reshape(img, self.new_size)
 
 
-def load_dataset(name):
-    transform_img_to_vect = transforms.Compose([transforms.ToTensor(), ReshapeTransform((-1,))])
+def load_dataset(name, vectorize):
+    if vectorize:
+        transform_img_to_vect = transforms.Compose([transforms.ToTensor(), ReshapeTransform((-1,))])
+    else:
+        transform_img_to_vect = transforms.Compose([transforms.ToTensor()])
     try:
         dataset_class = getattr(torchvision.datasets, name)
     except AttributeError:
@@ -30,6 +33,11 @@ def load_dataset(name):
     train_dl = torch.utils.data.DataLoader(
         train_ds, batch_size=128, shuffle=True, num_workers=0)
     test_dl = torch.utils.data.DataLoader(test_ds, batch_size=64)
-    size = np.prod(np.array(train_ds.data[0].shape))
+    if vectorize:
+        first_coord = np.prod(np.array(train_ds.data[0].shape))
+    elif len(train_ds.data[0].shape) == 2: # Black and white image, so only one channel.
+        first_coord = 1
+    else:
+        first_coord = train_ds.data[0].shape[0]
     nb_classes = len(np.unique(train_ds.labels)) if name == 'SVHN' else len(train_ds.classes)
-    return train_dl, test_dl, size, nb_classes
+    return train_dl, test_dl, first_coord, nb_classes

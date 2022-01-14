@@ -3,18 +3,21 @@ from pytorch_lightning.callbacks import Callback
 import torch
 import matplotlib.pyplot as plt
 
-import model
+import models
 import utils
 
 
 class PrintingCallback(Callback):
-    def __init__(self, test_dl, device):
+    def __init__(self, test_dl, device, full_logs):
         super().__init__()
         self.test_dl = test_dl
         self.device = device
+        self.full_logs = full_logs
 
     # See https://github.com/PyTorchLightning/pytorch-lightning/issues/5238#issuecomment-750351799
     def on_after_backward(self, trainer, pl_module):
+        if not self.full_logs:
+            return
         logging_depths = [0,
                           int(pl_module.depth / 4),
                           int(pl_module.depth / 2),
@@ -47,6 +50,9 @@ class PrintingCallback(Callback):
         pl_module.logger.experiment.log(
             {"test/loss/true": loss, "global_step": trainer.global_step})
 
+        if not self.full_logs:
+            return
+
         # Log test accuracy when the ODE is replaced by identity.
         denoised_model = pl_module.copy()
         new_weights = list(denoised_model.layers.children())
@@ -64,8 +70,8 @@ class PrintingCallback(Callback):
         # Log example of polynomial approximation for one weight
         layers = list(pl_module.layers.children())
         weight_example = np.array(
-            [layers[k].weight[8, 6].detach().numpy() for k in range(pl_module.depth)])
-        poly_example, _ = model.polyfit(weight_example, 3)
+            [layers[k].weight[4, 3].detach().numpy() for k in range(pl_module.depth)])
+        poly_example, _ = models.polyfit(weight_example, 3)
         plt.plot(weight_example)
         plt.plot(poly_example)
         trainer.logger.experiment.log({
@@ -74,7 +80,7 @@ class PrintingCallback(Callback):
             })
 
         for degree in [1, 2, 3, 5]:
-            denoised_weights, denoised_bias, errors_weights, _ = model.denoise_weights_bias(
+            denoised_weights, denoised_bias, errors_weights, _ = models.denoise_weights_bias(
                 layers, degree)
             # Log error of polynomial approximation
             pl_module.logger.experiment.log({

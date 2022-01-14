@@ -1,7 +1,8 @@
 standard = {
     'name': 'dataset-standard',
     'dataset': ['MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
-    'model': {
+    'model': 'FCResNet',
+    'model-config': {
         'width': 30,
         'depth': 200,
         'activation': 'ReLU',              # 'ReLU' or 'Tanh'
@@ -18,7 +19,8 @@ standard = {
 tanh = {
     'name': 'dataset-tanh',
     'dataset': ['MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
-    'model': {
+    'model': 'FCResNet',
+    'model-config': {
         'width': 30,
         'depth': 200,
         'activation': 'Tanh',              # 'ReLU' or 'Tanh'
@@ -35,7 +37,8 @@ tanh = {
 low_noise = {
     'name': 'dataset-low-noise',
     'dataset': ['MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
-    'model': {
+    'model': 'FCResNet',
+    'model-config': {
         'width': 30,
         'depth': 200,
         'activation': 'ReLU',              # 'ReLU' or 'Tanh'
@@ -52,7 +55,8 @@ low_noise = {
 high_noise = {
     'name': 'dataset-high-noise',
     'dataset': ['MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
-    'model': {
+    'model': 'FCResNet',
+    'model-config': {
         'width': 30,
         'depth': 200,
         'activation': 'ReLU',              # 'ReLU' or 'Tanh'
@@ -69,7 +73,8 @@ high_noise = {
 batch_norm = {
     'name': 'dataset-batch-norm',
     'dataset': ['MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
-    'model': {
+    'model': 'FCResNet',
+    'model-config': {
         'width': 30,
         'depth': 200,
         'activation': 'ReLU',              # 'ReLU' or 'Tanh'
@@ -86,7 +91,8 @@ batch_norm = {
 no_train_init_final = {
     'name': 'dataset-no-train-init-final',
     'dataset': ['MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
-    'model': {
+    'model': 'FCResNet',
+    'model-config': {
         'width': 30,
         'depth': 200,
         'activation': 'ReLU',              # 'ReLU' or 'Tanh'
@@ -103,9 +109,28 @@ no_train_init_final = {
 high_depth = {
     'name': 'dataset-high-depth',
     'dataset': ['MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
-    'model': {
+    'model': 'FCResNet',
+    'model-config': {
         'width': 30,
         'depth': 1000,
+        'activation': 'ReLU',              # 'ReLU' or 'Tanh'
+        'init_final_initialization_noise': 1,         # Initialization noise as a fraction of the default noise
+        'layers_initialization_noise': 1,
+        'batch_norm': False,
+        'skip_connection': True,
+        'train_init': True,
+        'train_final': True
+    },
+    'epochs': 30
+}
+
+low_width = {
+    'name': 'dataset-low-width',
+    'dataset': ['MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
+    'model': 'FCResNet',
+    'model-config': {
+        'width': 6,
+        'depth': 200,
         'activation': 'ReLU',              # 'ReLU' or 'Tanh'
         'init_final_initialization_noise': 1,         # Initialization noise as a fraction of the default noise
         'layers_initialization_noise': 1,
@@ -120,7 +145,8 @@ high_depth = {
 no_skip_connection = {
     'name': 'dataset-no-skip',
     'dataset': ['MNIST'],                    # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
-    'model': {
+    'model': 'FCResNet',
+    'model-config': {
         'width': 30,
         'depth': 4,
         'activation': 'ReLU',              # 'ReLU' or 'Tanh'
@@ -137,7 +163,8 @@ no_skip_connection = {
 debug = {
     'name': 'debug',
     'dataset': ['MNIST'],                    # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
-    'model': {
+    'model': 'FCResNet',
+    'model-config': {
         'width': 30,
         'depth': 200,
         'activation': 'ReLU',              # 'ReLU' or 'Tanh'
@@ -147,6 +174,18 @@ debug = {
         'skip_connection': True,
         'train_init': True,
         'train_final': True
+    },
+    'epochs': 2
+}
+
+debug_cnn = {
+    'name': 'debug-cnn',
+    'dataset': ['SVHN'],                    # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
+    'model': 'ConvResNet',
+    'full-logs': False,
+    'model-config': {
+        'channels': 10,
+        'depth': 20,
     },
     'epochs': 2
 }

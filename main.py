@@ -8,7 +8,7 @@ import wandb
 import config
 import logs
 import data
-import model
+import models
 
 
 @click.command()
@@ -28,31 +28,29 @@ def fit(config_name, offline):
         with wandb.init(project='scaling-resnets', entity='lpsm-deep', name=name) as run:
             wandb.config = config_dict
 
-            train_dl, test_dl, data_size, nb_classes = data.load_dataset(dataset)
+            train_dl, test_dl, first_coord, nb_classes = data.load_dataset(dataset, vectorize=(config_dict['model']=='FCResNet'))
 
-            resnet = model.ResNet(initial_width=data_size, final_width=nb_classes, **config_dict['model'])
+            model_class = getattr(models, config_dict['model'])
+            model = model_class(first_coord=first_coord, final_width=nb_classes, **config_dict['model-config'])
 
             gpu = 1 if torch.cuda.is_available() else 0
             device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
+            full_logs = 'full-logs' not in config_dict or config_dict['full-logs']
             wandb_logger = pl.loggers.WandbLogger()
             trainer = pl.Trainer(
                 gpus=gpu,
                 max_epochs=config_dict['epochs'],
-                progress_bar_refresh_rate=20,
                 logger=wandb_logger,
-                callbacks=[logs.PrintingCallback(test_dl, device)],
-                checkpoint_callback=False
+                callbacks=[logs.PrintingCallback(test_dl, device, full_logs), pl.callbacks.progress.TQDMProgressBar(20)],
+                enable_checkpointing=False
             )
-            trainer.fit(resnet, train_dl)
+            trainer.fit(model, train_dl)
 
             model_artifact = wandb.Artifact('resnet', type='model', metadata=config_dict)
             with model_artifact.new_file("trained-model.ckpt", mode="wb") as file:
-                torch.save(resnet, file)
+                torch.save(model, file)
             run.log_artifact(model_artifact)
-            model_artifact.wait()
-            model_artifact.aliases.append(name)
-            model_artifact.save()
 
 
 if __name__ == '__main__':
