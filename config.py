@@ -11,7 +11,10 @@ standard = {
         'batch_norm': False,
         'skip_connection': True,
         'train_init': True,
-        'train_final': True
+        'train_final': True,
+        'scaling': 'beta',
+        'scaling_beta': 1.,
+        'lr': 0.1
     },
     'epochs': 30
 }
@@ -29,7 +32,10 @@ tanh = {
         'batch_norm': False,
         'skip_connection': True,
         'train_init': True,
-        'train_final': True
+        'train_final': True,
+        'scaling': 'beta',
+        'scaling_beta': 1.,
+        'lr': 0.1
     },
     'epochs': 30
 }
@@ -47,7 +53,10 @@ low_noise = {
         'batch_norm': False,
         'skip_connection': True,
         'train_init': True,
-        'train_final': True
+        'train_final': True,
+        'scaling': 'beta',
+        'scaling_beta': 1.,
+        'lr': 0.1
     },
     'epochs': 30
 }
@@ -65,7 +74,10 @@ high_noise = {
         'batch_norm': False,
         'skip_connection': True,
         'train_init': True,
-        'train_final': True
+        'train_final': True,
+        'scaling': 'beta',
+        'scaling_beta': 1.,
+        'lr': 0.1
     },
     'epochs': 30
 }
@@ -83,7 +95,10 @@ batch_norm = {
         'batch_norm': True,
         'skip_connection': True,
         'train_init': True,
-        'train_final': True
+        'train_final': True,
+        'scaling': 'beta',
+        'scaling_beta': 1.,
+        'lr': 0.1
     },
     'epochs': 30
 }
@@ -101,7 +116,10 @@ no_train_init_final = {
         'batch_norm': False,
         'skip_connection': True,
         'train_init': False,
-        'train_final': False
+        'train_final': False,
+        'scaling': 'beta',
+        'scaling_beta': 1.,
+        'lr': 0.1
     },
     'epochs': 30
 }
@@ -119,7 +137,10 @@ high_depth = {
         'batch_norm': False,
         'skip_connection': True,
         'train_init': True,
-        'train_final': True
+        'train_final': True,
+        'scaling': 'beta',
+        'scaling_beta': 1.,
+        'lr': 0.1
     },
     'epochs': 30
 }
@@ -137,7 +158,10 @@ low_width = {
         'batch_norm': False,
         'skip_connection': True,
         'train_init': True,
-        'train_final': True
+        'train_final': True,
+        'scaling': 'beta',
+        'scaling_beta': 1.,
+        'lr': 0.1
     },
     'epochs': 30
 }
@@ -155,7 +179,10 @@ no_skip_connection = {
         'batch_norm': False,
         'skip_connection': False,
         'train_init': True,
-        'train_final': True
+        'train_final': True,
+        'scaling': 'beta',
+        'scaling_beta': 1.,
+        'lr': 0.1
     },
     'epochs': 30
 }
@@ -173,7 +200,10 @@ debug = {
         'batch_norm': False,
         'skip_connection': True,
         'train_init': True,
-        'train_final': True
+        'train_final': True,
+        'scaling': 'beta',
+        'scaling_beta': 1.,
+        'lr': 0.1
     },
     'epochs': 2
 }
@@ -188,4 +218,44 @@ debug_cnn = {
         'depth': 20,
     },
     'epochs': 2
+}
+
+no_scaling = {
+    'name': 'dataset-sqrt-scaling',
+    'dataset': ['MNIST'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
+    'model': 'FCResNet',
+    'model-config': {
+        'width': 30,
+        'depth': 200,
+        'activation': 'ReLU',              # 'ReLU' or 'Tanh'
+        'init_final_initialization_noise': 1,         # Initialization noise as a fraction of the default noise
+        'layers_initialization_noise': 1,
+        'batch_norm': False,
+        'skip_connection': True,
+        'train_init': True,
+        'train_final': True,
+        'scaling': 'none',
+        'lr': 0.1
+    },
+    'epochs': 10
+}
+
+rezero = {
+    'name': 'dataset-no-scaling',
+    'dataset': ['CIFAR10'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
+    'model': 'FCResNet',
+    'model-config': {
+        'width': 64,
+        'depth': 64,
+        'activation': 'ReLU',              # 'ReLU' or 'Tanh'
+        'init_final_initialization_noise': 1,         # Initialization noise as a fraction of the default noise
+        'layers_initialization_noise': 1,
+        'batch_norm': False,
+        'skip_connection': True,
+        'train_init': True,
+        'train_final': True,
+        'scaling': 'none',
+        'lr': 0.1
+    },
+    'epochs': 100
 }

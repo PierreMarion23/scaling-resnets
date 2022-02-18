@@ -28,7 +28,8 @@ def fit(config_name, offline):
         with wandb.init(project='scaling-resnets', entity='lpsm-deep', name=name) as run:
             wandb.config = config_dict
 
-            train_dl, test_dl, first_coord, nb_classes = data.load_dataset(dataset, vectorize=(config_dict['model']=='FCResNet'))
+            train_dl, test_dl, first_coord, nb_classes = data.load_dataset(
+                dataset, vectorize=(config_dict['model'] == 'FCResNet'))
 
             model_class = getattr(models, config_dict['model'])
             model = model_class(first_coord=first_coord, final_width=nb_classes, **config_dict['model-config'])

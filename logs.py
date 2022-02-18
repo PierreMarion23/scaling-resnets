@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 
 import models
 import utils
+import wandb
 
 
 class PrintingCallback(Callback):
@@ -39,6 +40,14 @@ class PrintingCallback(Callback):
                             {"train/weight-norm/" + str(idx_depth): torch.norm(param), "global_step": trainer.global_step})
                     idx_depth += 1
 
+            # Log scaling weights
+            if pl_module.scaling == "rezero":
+                scaling_weights = pl_module.resweight
+                for i in range(pl_module.depth):
+                    pl_module.logger.experiment.log(
+                        {"train/scaling/" + str(i): torch.abs(scaling_weights[i]),
+                         "global_step": trainer.global_step})
+
     def on_epoch_end(self, trainer, pl_module):
         # Log test accuracy
         true_targets, predictions = utils.get_true_targets_predictions(
@@ -52,6 +61,7 @@ class PrintingCallback(Callback):
 
         if not self.full_logs:
             return
+
 
         # Log test accuracy when the ODE is replaced by identity.
         denoised_model = pl_module.copy()
