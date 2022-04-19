@@ -41,15 +41,6 @@ class FCResNet(pl.LightningModule):
         else:
             self.scaling_weight = torch.full((self.depth,), 1)
 
-        if not self.train_init:
-            self.init.weight.requires_grad = False
-            self.init.bias.requires_grad = False
-        if not self.train_final:
-            self.final.weight.requires_grad = False
-            self.final.bias.requires_grad = False
-        if self._model_config['batch_norm']:
-            self.batch_norms = nn.Sequential(
-                *[nn.BatchNorm1d(self.width) for _ in range(self.depth)])
 
         # Uniform initialization on [-sqrt(3/width), sqrt(3/width)]
         self.init = create_linear_layer(self.initial_width, self.width, model_config['init_final_initialization_noise'])
@@ -61,6 +52,15 @@ class FCResNet(pl.LightningModule):
               for _ in range(self.depth)])
         self.final = create_linear_layer(self.width, self.final_width, model_config['init_final_initialization_noise'])
 
+        if not self.train_init:
+            self.init.weight.requires_grad = False
+            self.init.bias.requires_grad = False
+        if not self.train_final:
+            self.final.weight.requires_grad = False
+            self.final.bias.requires_grad = False
+        if self._model_config['batch_norm']:
+            self.batch_norms = nn.Sequential(
+                *[nn.BatchNorm1d(self.width) for _ in range(self.depth)])
         # ReZero initialization
         # torch.nn.init.kaiming_normal_(self.init.weight, a=0, mode='fan_in', nonlinearity='relu')
         # for i in range(self.depth):
@@ -99,13 +99,17 @@ class FCResNet(pl.LightningModule):
         return loss
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adagrad(
-            filter(lambda p: p.requires_grad, self.parameters()), lr=self._model_config['lr'])
-        scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=1.0)
-        return {"optimizer": optimizer, "lr_scheduler": {"scheduler": scheduler}}
+        # optimizer = torch.optim.Adagrad(
+        #     filter(lambda p: p.requires_grad, self.parameters()), lr=self._model_config['lr'])
+        # scheduler = torch.optim.lr_scheduler.StepLR(optimizer, 1.0, gamma=1.0)
+        # return {"optimizer": optimizer, "lr_scheduler": {"scheduler": scheduler}}
 
+        optimizer = torch.optim.Adam(
+            filter(lambda p: p.requires_grad, self.parameters()),
+            lr=self._model_config['lr'])
+        return optimizer
         # return torch.optim.RMSprop(filter(lambda p: p.requires_grad, self.parameters()), lr=0.01)
-        # return optimizer
+        #
 
     def copy(self):
         result = FCResNet(self.initial_width, self.final_width, **self._model_config)

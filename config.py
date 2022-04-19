@@ -19,6 +19,27 @@ standard = {
     'epochs': 30
 }
 
+scaling_speedup = {
+    'name': 'dataset-scaling-speedup-iid',
+    'dataset': ['FashionMNIST'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
+    'model': 'FCResNet',
+    'model-config': {
+        'width': 30,
+        'depth': 100,
+        'activation': 'ReLU',              # 'ReLU' or 'Tanh'
+        'init_final_initialization_noise': 1,  # Initialization noise as a fraction of the default noise
+        'layers_initialization_noise': 1,
+        'batch_norm': False,
+        'skip_connection': True,
+        'train_init': False,
+        'train_final': False,
+        'scaling': 'beta',
+        'scaling_beta': 0.1,
+        'lr': 0.0001
+    },
+    'epochs': 30
+}
+
 tanh = {
     'name': 'dataset-tanh',
     'dataset': ['MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
@@ -37,7 +58,7 @@ tanh = {
         'scaling_beta': 1.,
         'lr': 0.1
     },
-    'epochs': 30
+    'epochs': 20
 }
 
 low_noise = {
