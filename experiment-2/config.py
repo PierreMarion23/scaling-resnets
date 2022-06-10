@@ -4,7 +4,7 @@ perf_weights_regularity = {
     'model': 'FCResNet',
     'model-config': {
         'width': 30,
-        'depth': 100,
+        'depth': 1000,
         'activation': 'ReLU',              # 'ReLU' or 'Tanh'
         'init_final_initialization_noise': 1,  # Initialization noise as a fraction of the default noise
         'layers_initialization_noise': 1,
@@ -16,8 +16,8 @@ perf_weights_regularity = {
         'scaling_beta': 0.1,
         'lr': 0.0001,
         'regularity': 0.5,
-        'step_lr': 5
+        'step_lr': 10
     },
-    'epochs': 5,
-    'n_workers': 5
+    'epochs': 10,
+    'n_workers': 8
 }
