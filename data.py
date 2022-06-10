@@ -17,9 +17,6 @@ class ReshapeTransform:
 
 def load_dataset(name, vectorize):
     if vectorize:
-        # Data transformation to reproduce ReZero experiments. Works only with CIFAR! TODO: clean this
-        # transform_img_to_vect = transforms.Compose([
-        #    transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)), ReshapeTransform((-1,))])
         transform_img_to_vect = transforms.Compose([transforms.ToTensor(), ReshapeTransform((-1,))])
     else:
         transform_img_to_vect = transforms.Compose([transforms.ToTensor()])
