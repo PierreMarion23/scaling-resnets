@@ -4,6 +4,7 @@ __pycache__/
 datasets/
 simulations/
 figures/
+results/
 wandb
 lightning_logs
 experiment-2/results

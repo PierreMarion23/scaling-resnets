@@ -64,11 +64,13 @@ def fit_parallel(config):
         for reg in grid_regularity:
             for beta in grid_beta:
                 config['model-config']['lr'] = lr
-                config['model-config']['regularity'] = reg
+                config['model-config']['regularity']['value'] = reg
                 config['model-config']['scaling_beta'] = beta
                 list_configs.append(copy.deepcopy(config))
-    with Pool(processes=config['n_workers']) as pool:
-        pool.map(fit, list_configs)
+    for config_dict in list_configs:
+        fit(config_dict)
+    #with Pool(processes=config['n_workers']) as pool:
+    #    pool.map(fit, list_configs)
 
 
 if __name__ == '__main__':

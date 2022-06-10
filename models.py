@@ -49,7 +49,7 @@ class ResNet(pl.LightningModule, ABC):
 
         self.initial_width = first_coord
         self.final_width = final_width
-        self._model_config = model_config
+        self.model_config = model_config
         self.width = model_config['width']
         self.depth = model_config['depth']
         self.activation = getattr(nn, model_config['activation'])()  # e.g. torch.nn.ReLU()
