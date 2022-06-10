@@ -1,58 +1,75 @@
+import copy
+from multiprocessing import Pool
+import numpy as np
 import os
-
-import click
+import pickle
 import pytorch_lightning as pl
+import time
 import torch
-import wandb
 
 import config
-import logs
 import data
 import models
+import utils
 
 
-@click.command()
-@click.option('--config', '-c', 'config_name', default='standard', prompt='Name of the config to use',
-              help='Name of the config to use.')
-@click.option('--offline', '-o', is_flag=True, help='Do not sync the wandb run online.')
-def fit(config_name, offline):
-    if offline:
-        os.environ['WANDB_MODE'] = 'offline'
-    wandb.login()
-
-    config_dict = getattr(config, config_name)
+def fit(config_dict):
     name_template = config_dict['name']
 
     for dataset in config_dict['dataset']:
         name = name_template.replace('dataset', dataset)
-        with wandb.init(project='scaling-resnets', entity='lpsm-deep', name=name) as run:
-            wandb.config.update(config_dict)
 
-            train_dl, test_dl, first_coord, nb_classes = data.load_dataset(
-                dataset, vectorize=(config_dict['model'] == 'FCResNet'))
+        train_dl, test_dl, first_coord, nb_classes = data.load_dataset(dataset, vectorize=True)
 
-            model_class = getattr(models, config_dict['model'])
-            model = model_class(first_coord=first_coord, final_width=nb_classes, **config_dict['model-config'])
+        model_class = getattr(models, config_dict['model'])
+        model = model_class(first_coord=first_coord, final_width=nb_classes, **config_dict['model-config'])
 
-            gpu = 1 if torch.cuda.is_available() else 0
-            device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        gpu = 1 if torch.cuda.is_available() else 0
+        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
 
-            full_logs = 'full-logs' not in config_dict or config_dict['full-logs']
-            wandb_logger = pl.loggers.WandbLogger()
-            trainer = pl.Trainer(
+        trainer = pl.Trainer(
                 gpus=gpu,
                 max_epochs=config_dict['epochs'],
-                logger=wandb_logger,
-                callbacks=[logs.PrintingCallback(test_dl, device, full_logs), pl.callbacks.progress.TQDMProgressBar(20)],
-                enable_checkpointing=False
+                enable_checkpointing=False,
+                enable_progress_bar=False,
+                enable_model_summary=False
             )
-            trainer.fit(model, train_dl)
+        trainer.fit(model, train_dl)
 
-            model_artifact = wandb.Artifact('resnet', type='model', metadata=config_dict)
-            with model_artifact.new_file("trained-model.ckpt", mode="wb") as file:
-                torch.save(model, file)
-            run.log_artifact(model_artifact)
+        print('Training finished')
+        true_targets, predictions = utils.get_true_targets_predictions(
+            test_dl, model, device)
+        accuracy = np.mean(np.array(true_targets) == np.array(predictions))
+        loss = utils.get_eval_loss(test_dl, model, device)
+
+        metrics = {'test_accuracy': accuracy, 'test_loss': loss}
+        results_dir = f'{os.getcwd()}/results/{name}/{str(time.time())}'
+        os.makedirs(results_dir, exist_ok=True)
+        trainer.save_checkpoint(f'{results_dir}/model.ckpt')
+
+        with open(f'{results_dir}/metrics.pkl', 'wb') as f:
+            pickle.dump(metrics, f)
+
+        with open(f'{results_dir}/config.pkl', 'wb') as f:
+            pickle.dump(config_dict, f)
+
+
+def fit_parallel(config):
+    grid_lr = [0.0001, 0.001, 0.01, 0.1, 1.]
+    grid_regularity = np.linspace(0.1, 0.9, 10)
+    grid_beta = np.linspace(0.1, 0.9, 10)
+
+    list_configs = []
+    for lr in grid_lr:
+        for reg in grid_regularity:
+            for beta in grid_beta:
+                config['model-config']['lr'] = lr
+                config['model-config']['regularity'] = reg
+                config['model-config']['scaling_beta'] = beta
+                list_configs.append(copy.deepcopy(config))
+    with Pool(processes=config['n_workers']) as pool:
+        pool.map(fit, list_configs)
 
 
 if __name__ == '__main__':
-    fit()
+    fit_parallel(config.perf_weights_regularity)

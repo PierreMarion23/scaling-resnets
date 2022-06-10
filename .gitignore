@@ -2,5 +2,6 @@ __pycache__/
 .vscode/
 .ipynb_checkpoints
 datasets/
+simulations/
+figures/
 wandb
-**.ipynb
