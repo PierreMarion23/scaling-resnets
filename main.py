@@ -67,10 +67,8 @@ def fit_parallel(config):
                 config['model-config']['regularity']['value'] = reg
                 config['model-config']['scaling_beta'] = beta
                 list_configs.append(copy.deepcopy(config))
-    for config_dict in list_configs:
-        fit(config_dict)
-    #with Pool(processes=config['n_workers']) as pool:
-    #    pool.map(fit, list_configs)
+    with Pool(processes=config['n_workers']) as pool:
+       pool.map(fit, list_configs)
 
 
 if __name__ == '__main__':
