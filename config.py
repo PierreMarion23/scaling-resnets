@@ -1,5 +1,21 @@
+
+scaling_initialization_exp = {
+    'name': 'scaling_initialization_exp',
+    'model': 'FullResnet',
+    'model-config': {
+        'width': 40,
+        'depth': 10,
+        'scaling_beta': 0.5,
+        'activation': 'ReLU',
+        'regularity': {}
+    },
+    'niter': 5,
+    'dim_input': 64,
+    'nb_classes': 1,
+}
+
 perf_weights_regularity = {
-    'name': 'perf-weights-regularity',
+    'name': 'perf-weights-regularity-dataset',
     'dataset': ['MNIST'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
     'model': 'SimpleResNet',
     'model-config': {

@@ -13,19 +13,23 @@ import models
 import utils
 
 
-def fit(config_dict):
+def fit(config_dict: dict):
     name_template = config_dict['name']
 
     for dataset in config_dict['dataset']:
         name = name_template.replace('dataset', dataset)
 
-        train_dl, test_dl, first_coord, nb_classes = data.load_dataset(dataset, vectorize=True)
+        train_dl, test_dl, first_coord, nb_classes = data.load_dataset(
+            dataset, vectorize=True)
 
         model_class = getattr(models, config_dict['model'])
-        model = model_class(first_coord=first_coord, final_width=nb_classes, **config_dict['model-config'])
+        model = model_class(
+            first_coord=first_coord, final_width=nb_classes,
+            **config_dict['model-config'])
 
         gpu = 1 if torch.cuda.is_available() else 0
-        device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        device = torch.device("cuda") if torch.cuda.is_available() \
+            else torch.device("cpu")
 
         trainer = pl.Trainer(
                 gpus=gpu,
@@ -68,7 +72,7 @@ def fit_parallel(config):
                 config['model-config']['scaling_beta'] = beta
                 list_configs.append(copy.deepcopy(config))
     with Pool(processes=config['n_workers']) as pool:
-       pool.map(fit, list_configs)
+        pool.map(fit, list_configs)
 
 
 if __name__ == '__main__':

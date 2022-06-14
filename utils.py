@@ -86,6 +86,6 @@ def rbf_kernel(x1, x2, variance):
     return np.exp(-1 * ((x1-x2) ** 2) / (2*variance))
 
 
-def gram_matrix(depth ,variance):
+def gram_matrix(depth, variance):
     xs = np.linspace(0, 1, depth + 1)
-    return [[rbf_kernel(x1,x2,variance) for x2 in xs] for x1 in xs]
+    return [[rbf_kernel(x1, x2, variance) for x2 in xs] for x1 in xs]
