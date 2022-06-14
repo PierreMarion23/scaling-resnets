@@ -2,5 +2,10 @@ __pycache__/
 .vscode/
 .ipynb_checkpoints
 datasets/
+simulations/
+figures/
+results/
 wandb
-**.ipynb
+lightning_logs
+experiment-2/results
+**.pdf

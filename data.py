@@ -17,9 +17,6 @@ class ReshapeTransform:
 
 def load_dataset(name, vectorize):
     if vectorize:
-        # Data transformation to reproduce ReZero experiments. Works only with CIFAR! TODO: clean this
-        # transform_img_to_vect = transforms.Compose([
-        #    transforms.ToTensor(), transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)), ReshapeTransform((-1,))])
         transform_img_to_vect = transforms.Compose([transforms.ToTensor(), ReshapeTransform((-1,))])
     else:
         transform_img_to_vect = transforms.Compose([transforms.ToTensor()])
@@ -34,8 +31,8 @@ def load_dataset(name, vectorize):
     test_ds = dataset_class(
         os.path.join("datasets", name), download=True, transform=transform_img_to_vect, **test_arg)
     train_dl = torch.utils.data.DataLoader(
-        train_ds, batch_size=128, shuffle=True, num_workers=0)
-    test_dl = torch.utils.data.DataLoader(test_ds, batch_size=64)
+        train_ds, batch_size=128, shuffle=True, pin_memory=True)
+    test_dl = torch.utils.data.DataLoader(test_ds, batch_size=64, pin_memory=True)
     if vectorize:
         first_coord = np.prod(np.array(train_ds.data[0].shape))
     elif len(train_ds.data[0].shape) == 2: # Black and white image, so only one channel.
