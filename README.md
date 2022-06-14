@@ -1,4 +1,4 @@
-# Training very deep resnets
+# Scaling ResNets in the Large-depth Regime
 
 ## Installing dependencies
 
