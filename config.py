@@ -4,7 +4,7 @@ scaling_initialization_exp = {
     'model': 'FullResnet',
     'model-config': {
         'width': 40,
-        'depth': 10,
+        'depth': 100,
         'scaling_beta': 0.5,
         'activation': 'ReLU',
         'regularity': {}
@@ -30,6 +30,22 @@ histogram_initialization_exp = {
     'nb_classes': 1,
 }
 
+scaling_regularity_initialization_exp = {
+    'name': 'scaling_regularity_initialization_exp',
+    'model': 'FullResnet',
+    'model-config': {
+        'width': 40,
+        'depth': 1000,
+        'scaling_beta': 0.5,
+        'activation': 'ReLU',
+        'regularity': {}
+    },
+    'niter_reg': 5,
+    'niter_beta': 10,
+    'dim_input': 64,
+    'nb_classes': 1,
+}
+
 
 perf_weights_regularity = {
     'name': 'perf-weights-regularity-dataset',
@@ -51,3 +67,5 @@ perf_weights_regularity = {
     'epochs': 10,
     'n_workers': 5
 }
+
+

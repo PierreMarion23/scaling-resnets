@@ -17,6 +17,12 @@ if distutils.spawn.find_executable('latex'):
 
 
 def get_results(exp_name: str) -> list:
+    """Read the results of test accuracy saved after execution of the main
+    file.
+
+    :param exp_name: name of the configuration
+    :return: list of results
+    """
     results = {'accuracy': [], 'regularity': [], 'lr': [], 'scaling': []}
     for directory in glob.glob(os.path.join('results', exp_name, '*')):
         with open(os.path.join(directory, 'config.pkl'), 'rb') as f:
@@ -33,6 +39,11 @@ def get_results(exp_name: str) -> list:
 
 
 def plot_heatmap(results: list):
+    """Reproduces Figure 9 of the paper.
+
+    :param results: list of results
+    :return:
+    """
     df = pd.DataFrame.from_dict(results)
 
     df2 = pd.pivot_table(df, index='scaling', columns='regularity',

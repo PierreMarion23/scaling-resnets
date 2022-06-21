@@ -6,8 +6,9 @@ import pandas as pd
 import seaborn as sns
 import torch
 
-from config import scaling_initialization_exp
+import config
 from models import FullResNet
+import utils
 
 
 sns.set(font_scale=1.5)
@@ -18,12 +19,21 @@ if distutils.spawn.find_executable('latex'):
 
 
 def run_experiment(config: dict, grid_beta: list, grid_reg: list) -> list:
+    """ Loop over a grid of initializations and scaling values, compute ratios
+    between norms of the output and the input, as well as their respective
+    gradients.
+
+    :param config: configuration of the experiment
+    :param grid_beta: all values of scaling to loop over
+    :param grid_reg: regularity of the process used to initialize the weights
+    of the network
+    :return:
+    """
+
     results = []
     for reg in grid_reg:
         print(reg)
-        for k in range(config['niter']):
-            if config['niter'] > 10 ** 3 and k % 10 == 0:
-                print(k)
+        for k in range(config['niter_reg']):
             model_config = config['model-config']
             model_config['regularity']['type'] = 'fbm'
             model_config['regularity']['value'] = reg
@@ -32,37 +42,42 @@ def run_experiment(config: dict, grid_beta: list, grid_reg: list) -> list:
 
             for beta in grid_beta:
                 model.reset_scaling(beta)
+                for j in range(config['niter_beta']):
 
-                x0 = torch.rand((1, config['dim_input']))
-                target = torch.rand((1,))
+                    x0 = torch.rand((1, config['dim_input']))
+                    target = torch.rand((1,))
 
-                h_0 = model.init(x0)
-                h_L = model.forward_hidden_state(h_0)
-                output = model.final(h_L)
+                    h_0 = model.init(x0)
+                    h_L = model.forward_hidden_state(h_0)
+                    output = model.final(h_L)
 
-                h_0.retain_grad()
-                h_L.retain_grad()
+                    h_0.retain_grad()
+                    h_L.retain_grad()
 
-                loss = torch.norm(output - target) ** 2
-                loss.backward()
+                    loss = torch.norm(output - target) ** 2
+                    loss.backward()
 
-                h_0_grad = h_0.grad
-                h_L_grad = h_L.grad
+                    h_0_grad = h_0.grad
+                    h_L_grad = h_L.grad
 
-                results.append({
-                    'beta': beta,
-                    'regularity': reg,
-                    'hidden_state_difference': float(
-                        torch.norm(h_L - h_0) / torch.norm(h_0)),
-                    'gradient_difference': float(
-                        torch.norm(h_L_grad - h_0_grad) / torch.norm(
-                            h_L_grad)),
-                    })
-
+                    results.append({
+                        'beta': beta,
+                        'regularity': reg,
+                        'hidden_state_difference': float(
+                            torch.norm(h_L - h_0) / torch.norm(h_0)),
+                        'gradient_difference': float(
+                            torch.norm(h_L_grad - h_0_grad) / torch.norm(
+                                h_L_grad)),
+                        })
     return results
 
 
 def plot_results(results: list):
+    """Reproduces Figure 7 of the paper.
+
+    :param results: list of results
+    :return:
+    """
     df = pd.DataFrame(results)
     df.columns = ['scaling', 'regularity', 'hidden_state_difference',
                   'gradient_difference']
@@ -93,11 +108,23 @@ def plot_results(results: list):
 
 
 if __name__ == '__main__':
-    config = scaling_initialization_exp
+
+    # Plot examples of fractional Brownian Motion
+    grid_H = [0.2, 0.5, 0.8]
+    for hurst in grid_H:
+        path = utils.generate_fbm(1000, hurst)[0]
+        plt.plot(path)
+        plt.show()
+
+    # Run the experiments to loop over various initializations and scalings
+    config_heatmap = config.scaling_regularity_initialization_exp
 
     grid_beta = list(np.linspace(0, 1.3, 70))
     grid_reg = list(np.linspace(0.05, 0.97, 51))
 
-    results = run_experiment(config, grid_beta, grid_reg)
+    results = run_experiment(config_heatmap, grid_beta, grid_reg)
     plot_results(results)
+
+
+
 

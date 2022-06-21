@@ -14,6 +14,11 @@ import utils
 
 
 def fit(config_dict: dict):
+    """Train a ResNet following the configuration.
+
+    :param config_dict: configuration of the network and dataset
+    :return:
+    """
     name_template = config_dict['name']
 
     for dataset in config_dict['dataset']:
@@ -58,7 +63,13 @@ def fit(config_dict: dict):
             pickle.dump(config_dict, f)
 
 
-def fit_parallel(config):
+def fit_parallel(config: dict):
+    """Train in parallel ResNet with different learning rate, scaling, and
+    initialization.
+
+    :param config: configuration of the network and dataset
+    :return:
+    """
     grid_lr = [0.0001, 0.001, 0.01, 0.1, 1.]
     grid_regularity = np.linspace(0.1, 0.9, 10)
     grid_beta = np.linspace(0.1, 0.9, 10)

@@ -22,9 +22,9 @@ def run_experiment(
     last layer values to the initial one, as well as their respective
     gradients.
 
-    :param config:
-    :param grid_beta:
-    :param grid_depth:
+    :param config: configuration of the experiment
+    :param grid_beta: all values of scaling to loop over
+    :param grid_depth: all depths of the ResNet to loop over
     :return:
     """
     results = []
