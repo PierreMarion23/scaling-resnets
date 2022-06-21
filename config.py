@@ -9,10 +9,27 @@ scaling_initialization_exp = {
         'activation': 'ReLU',
         'regularity': {}
     },
-    'niter': 5,
+    'niter': 50,
     'dim_input': 64,
     'nb_classes': 1,
 }
+
+
+histogram_initialization_exp = {
+    'name': 'histogram_initialization_exp',
+    'model': 'FullResnet',
+    'model-config': {
+        'width': 100,
+        'depth': 10 ** 3,
+        'scaling_beta': 0.5,
+        'activation': 'ReLU',
+        'regularity': {'type': 'iid'}
+    },
+    'niter': 10 ** 4,
+    'dim_input': 64,
+    'nb_classes': 1,
+}
+
 
 perf_weights_regularity = {
     'name': 'perf-weights-regularity-dataset',

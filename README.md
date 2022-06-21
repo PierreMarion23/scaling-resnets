@@ -27,3 +27,13 @@ Standard:
 ```
 python main.py
 ```
+
+## Reproducing the paper figures
+
+See the file ``config.py`` for all configurations of the experiments. 
+
+Figures 1, 2 and 3 can be reproduced with
+
+```
+python scaling_init_experiment.py
+```

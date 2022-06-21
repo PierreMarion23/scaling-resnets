@@ -73,14 +73,43 @@ def run_experiment(
     return results
 
 
-def plot_results(results: list, col_order: list):
+def plot_histogram(results: list):
+    """ Reproduces Figure 2 of the paper
+
+    :param results: list of results
+    :return:
+    """
     df = pd.DataFrame(results)
     df.columns = ['depth', r'$\beta$', 'hidden_state_ratio',
                   'hidden_state_difference', 'gradient_ratio',
                   'gradient_difference']
 
-    print('Evolution of the norm of the output as a function of L for '
-          'different values of beta')
+    g = sns.histplot(x='hidden_state_ratio', data=df)
+    g.set_xlabel(r'$\|h_L\| / \|h_0\|$')
+    plt.savefig('figures/hist_norm_initialization.pdf', bbox_inches='tight')
+    plt.show()
+
+    g = sns.histplot(x='gradient_ratio', data=df)
+    g.set_xlabel(
+        r'$ \|\frac{\partial \mathcal{L}}{\partial h_0}\| / '
+        r'\|\frac{\partial \mathcal{L}}{\partial h_L}\|$')
+    plt.savefig('figures/hist_gradient_initialization.pdf',
+                bbox_inches='tight')
+    plt.show()
+
+
+def plot_results(results: list, col_order: list):
+    """ Reproduce Figures 1 and 3 of the paper
+
+    :param results: list of results
+    :param col_order: grid of beta values for plotting
+    :return:
+    """
+    df = pd.DataFrame(results)
+    df.columns = ['depth', r'$\beta$', 'hidden_state_ratio',
+                  'hidden_state_difference', 'gradient_ratio',
+                  'gradient_difference']
+
     g = sns.relplot(
         x='depth',
         y='hidden_state_difference',
@@ -99,8 +128,6 @@ def plot_results(results: list, col_order: list):
     plt.savefig('figures/norm_output_initialization.pdf', bbox_inches='tight')
     plt.show()
 
-    print('Evolution of the norm of the gradients as a function of L for '
-          'different values of beta')
     g = sns.relplot(
         x='depth',
         y='gradient_difference',
@@ -122,21 +149,30 @@ def plot_results(results: list, col_order: list):
 
 
 if __name__ == '__main__':
+
+    # Experiment with i.i.d. initialization
     config_iid = config.scaling_initialization_exp
     config_iid['model-config']['regularity'] = {'type': 'iid'}
 
     grid_depth = np.linspace(10, 1e3, num=10, dtype=int)
     grid_beta = [1.0, 0.25, 0.5]
 
-    # Experiment with i.i.d. initialization
     results_iid = run_experiment(
         config_iid, grid_beta, grid_depth)
 
     plot_results(results_iid, grid_beta)
 
+    # Distribution of norms when beta=1/2
+    config_hist = config.histogram_initialization_exp
+    results_hist = run_experiment(
+        config_hist, [config_hist['model-config']['scaling_beta']],
+        [config_hist['model-config']['depth']])
+    plot_histogram(results_hist)
+
     # Experiment with smooth initialization
     config_smooth = config.scaling_initialization_exp
-    config_smooth['model-config']['regularity'] = {'type': 'rbf', 'value': 0.01}
+    config_smooth['model-config']['regularity'] = {
+        'type': 'rbf', 'value': 0.01}
 
     grid_beta = [2., 0.5, 1.]
     results_smooth = run_experiment(
