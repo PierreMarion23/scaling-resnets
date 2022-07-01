@@ -13,10 +13,11 @@ import models
 import utils
 
 
-def fit(config_dict: dict):
+def fit(config_dict: dict, verbose: bool = False):
     """Train a ResNet following the configuration.
 
     :param config_dict: configuration of the network and dataset
+    :param verbose: print information about traning
     :return:
     """
     name_template = config_dict['name']
@@ -40,8 +41,8 @@ def fit(config_dict: dict):
                 gpus=gpu,
                 max_epochs=config_dict['epochs'],
                 enable_checkpointing=False,
-                enable_progress_bar=False,
-                enable_model_summary=False
+                enable_progress_bar=verbose,
+                enable_model_summary=verbose
             )
         trainer.fit(model, train_dl)
 
@@ -52,6 +53,8 @@ def fit(config_dict: dict):
         loss = utils.get_eval_loss(test_dl, model, device)
 
         metrics = {'test_accuracy': accuracy, 'test_loss': loss}
+        if verbose:
+            print(f'Test accuracy: {accuracy}')
         results_dir = f'{os.getcwd()}/results/{name}/{str(time.time())}'
         os.makedirs(results_dir, exist_ok=True)
         trainer.save_checkpoint(f'{results_dir}/model.ckpt')
@@ -61,6 +64,7 @@ def fit(config_dict: dict):
 
         with open(f'{results_dir}/config.pkl', 'wb') as f:
             pickle.dump(config_dict, f)
+    return model
 
 
 def fit_parallel(config: dict):

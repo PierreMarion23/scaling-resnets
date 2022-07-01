@@ -31,7 +31,7 @@ def create_linear_layers_rbf(
     layers = [
         nn.Linear(width, width, bias=False) for _ in range(depth)]
     for k in range(depth):
-        layers[k].weight = torch.nn.Parameter(weights[:,:,k])
+        layers[k].weight = torch.nn.Parameter(weights[:, :, k])
     return nn.Sequential(*layers)
 
 
@@ -158,9 +158,6 @@ class SimpleResNet(ResNet):
         super().__init__(first_coord, final_width, **model_config)
 
         if model_config['regularity']['type'] == 'iid':
-            self.inner_weights = nn.Sequential(
-                *[create_linear_layer(self.width, self.width, bias=False)
-                  for _ in range(self.depth)])
             self.outer_weights = nn.Sequential(
                 *[create_linear_layer(self.width, self.width, bias=False)
                   for _ in range(self.depth)])
@@ -235,6 +232,10 @@ class FullResNet(ResNet):
         :return: output of the last hidden layer
         """
         for k in range(self.depth):
-            hidden_state = hidden_state + self.scaling_weight[k] * self.outer_weights[k](
-                    self.activation(self.inner_weights[k](hidden_state)))
+            hidden_state = hidden_state + (
+                    self.scaling_weight[k] *
+                    self.outer_weights[k](
+                        self.activation(self.inner_weights[k](hidden_state))
+                    )
+            )
         return hidden_state

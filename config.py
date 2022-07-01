@@ -55,13 +55,13 @@ perf_weights_regularity = {
         'width': 30,
         'depth': 1000,
         'activation': 'ReLU',              # 'ReLU' or 'Tanh'
-        'scaling_beta': 0.1,
+        'scaling_beta': 1.,
         'regularity':
             {
                 'type': 'fbm',
                 'value': 0.5
             },
-        'lr': 0.0001,
+        'lr': 0.001,
         'step_lr': 5
     },
     'epochs': 10,
