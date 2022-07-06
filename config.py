@@ -4,8 +4,6 @@ scaling_initialization_exp = {
     'model': 'FullResnet',
     'model-config': {
         'width': 40,
-        'depth': 100,
-        'scaling_beta': 0.5,
         'activation': 'ReLU',
         'regularity': {}
     },

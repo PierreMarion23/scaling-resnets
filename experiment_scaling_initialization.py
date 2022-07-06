@@ -1,4 +1,7 @@
 import distutils.spawn
+import os
+from typing import Optional
+
 from matplotlib import rc
 import matplotlib.pyplot as plt
 import numpy as np
@@ -73,8 +76,10 @@ def run_experiment(
     return results
 
 
-def plot_histogram(results: list):
-    """ Reproduces Figure 2 of the paper
+def plot_histogram(results: list, filepath: Optional[str] = 'figures'):
+    """Plot an histogram of ratios between initial and final norms, 
+    and initial and final gradients. The depth L is fixed.
+    See Figure 2 of the paper.
 
     :param results: list of results
     :return:
@@ -86,20 +91,23 @@ def plot_histogram(results: list):
 
     g = sns.histplot(x='hidden_state_ratio', data=df)
     g.set_xlabel(r'$\|h_L\| / \|h_0\|$')
-    plt.savefig('figures/hist_norm_initialization.pdf', bbox_inches='tight')
+    plt.savefig(os.path.join(filepath, 'hist_norm_initialization.pdf'), 
+                bbox_inches='tight')
     plt.show()
 
     g = sns.histplot(x='gradient_ratio', data=df)
     g.set_xlabel(
         r'$ \|\frac{\partial \mathcal{L}}{\partial h_0}\| / '
         r'\|\frac{\partial \mathcal{L}}{\partial h_L}\|$')
-    plt.savefig('figures/hist_gradient_initialization.pdf',
+    plt.savefig(os.path.join(filepath, 'hist_gradient_initialization.pdf'),
                 bbox_inches='tight')
     plt.show()
 
 
-def plot_results(results: list, col_order: list):
-    """ Reproduce Figures 1 and 3 of the paper
+def plot_results(results: list, col_order: list, filepath: Optional[str] = 'figures'):
+    """ Plot relative ratios between last and first hidden state norms and gradient norms,
+    as a function of the depth L.
+    See Figures 1, 3, 4, 5 of the paper.
 
     :param results: list of results
     :param col_order: grid of beta values for plotting
@@ -125,7 +133,7 @@ def plot_results(results: list, col_order: list):
     g.axes[0].set_xlabel(r'$L$')
     g.axes[1].set_xlabel(r'$L$')
     g.axes[2].set_xlabel(r'$L$')
-    plt.savefig('figures/norm_output_initialization.pdf', bbox_inches='tight')
+    plt.savefig(os.path.join(filepath, 'norm_output_initialization.pdf'), bbox_inches='tight')
     plt.show()
 
     g = sns.relplot(
@@ -144,15 +152,17 @@ def plot_results(results: list, col_order: list):
     g.axes[1].set_xlabel(r'$L$')
     g.axes[2].set_xlabel(r'$L$')
     plt.savefig(
-        'figures/norm_gradient_initialization.pdf', bbox_inches='tight')
+        os.path.join(filepath, 'norm_gradient_initialization.pdf'), bbox_inches='tight')
     plt.show()
 
 
 if __name__ == '__main__':
 
-    # Experiment with i.i.d. initialization
+    # Experiment with i.i.d. initialization - Figures 1 and 3 of the paper
     config_iid = config.scaling_initialization_exp
     config_iid['model-config']['regularity'] = {'type': 'iid'}
+    filepath = 'figures/scaling_initialization/iid'
+    os.makedirs(filepath, exist_ok=True)
 
     grid_depth = np.linspace(10, 1e3, num=10, dtype=int)
     grid_beta = [1.0, 0.25, 0.5]
@@ -160,23 +170,23 @@ if __name__ == '__main__':
     results_iid = run_experiment(
         config_iid, grid_beta, grid_depth)
 
-    plot_results(results_iid, grid_beta)
+    plot_results(results_iid, grid_beta, filepath)
 
-    # Distribution of norms when beta=1/2
+    # Distribution of norms for i.i.d. initialization - Figure 2 of the paper
     config_hist = config.histogram_initialization_exp
     results_hist = run_experiment(
         config_hist, [config_hist['model-config']['scaling_beta']],
         [config_hist['model-config']['depth']])
-    plot_histogram(results_hist)
+    plot_histogram(results_hist, filepath)
 
-    # Experiment with smooth initialization
+    # Experiment with smooth initialization - Figures 4 and 5 of the paper
     config_smooth = config.scaling_initialization_exp
     config_smooth['model-config']['regularity'] = {
         'type': 'rbf', 'value': 0.01}
+    filepath = 'figures/scaling_initialization/smooth'
+    os.makedirs(filepath, exist_ok=True)
 
     grid_beta = [2., 0.5, 1.]
     results_smooth = run_experiment(
         config_smooth, grid_beta, grid_depth)
-    plot_results(results_smooth, grid_beta)
-
-
+    plot_results(results_smooth, grid_beta, filepath)
