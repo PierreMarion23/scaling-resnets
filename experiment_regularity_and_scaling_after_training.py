@@ -17,7 +17,7 @@ if distutils.spawn.find_executable('latex'):
 
 
 def get_results(exp_name: str) -> list:
-    """Read the results of test accuracy saved after execution of the main
+    """Read the results of test accuracy saved after execution of the training
     file.
 
     :param exp_name: name of the configuration

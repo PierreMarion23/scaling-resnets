@@ -44,7 +44,7 @@ Figure 9 can be reproduced by first training a grid of networks with different
 initializations and scalings on MNIST and CIFAR with
 
 ```
-python main.py
+python training.py
 ```
 
 Note that this script uses parallelization. Then, to plot the results,

@@ -5,7 +5,7 @@ import numpy as np
 import seaborn as sns
 
 import config
-import main
+import training
 
 sns.set(font_scale=1.5)
 
@@ -15,7 +15,7 @@ if distutils.spawn.find_executable('latex'):
 
 
 def run_experiment(config):
-    model = main.fit(config, verbose=True)
+    model = training.fit(config, verbose=True)
     random_index = [np.random.randint(config['model-config']['width']),
                     np.random.randint(config['model-config']['width'])]
 
