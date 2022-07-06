@@ -1,0 +1,15 @@
+name: deep-resnets
+channels:
+  - conda-forge
+  - pytorch
+  - defaults
+dependencies:
+  - python=3.9.9
+  - matplotlib=3.5.1
+  - numpy=1.22.0
+  - pandas=1.4.1
+  - pytorch-lightning=1.5.8
+  - seaborn=0.11.2
+  - scipy=1.7.3
+  - pytorch=1.10.0
+  - torchvision=0.10.1

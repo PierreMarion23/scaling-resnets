@@ -67,5 +67,3 @@ perf_weights_regularity = {
     'epochs': 10,
     'n_workers': 5
 }
-
-

@@ -1,17 +1,26 @@
 # Scaling ResNets in the Large-depth Regime
 
-## Installing dependencies
+## Environment
 
-With pip:
+### With conda
+
 ```
-pip3 install torch torchvision numpy scipy matplotlib multiprocessing pytorch-lightning
+conda env create -f environment.yml
+```
+
+### With pip
+
+Install Python 3.9.9 and pip 21.3.1, then
+
+```
+pip3 install -r requirements.txt
 ```
 
 ## Reproducing the paper figures
 
 See the file ``config.py`` for all configurations of the experiments. The 
 scripts may take some time to run. To reduce computation time decrease the number 
-of iterations ``niter`` or the number of epochs ``epochin the configurations.
+of iterations ``niter`` or the number of epochs ``epoch`` in the configurations.
 
 Figures 1 to 5 can be reproduced with
 
@@ -24,6 +33,7 @@ Figures 6 and 7 can be reproduced with
 ```
 python experiment_regularity_and_scaling_initialization.py
 ```
+
 Figure 8 can be reproduced with
 
 ```
