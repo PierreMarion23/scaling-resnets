@@ -161,8 +161,7 @@ def plot_results(results: list, col_order: list, filepath: Optional[str] = 'figu
 if __name__ == '__main__':
 
     # Experiment with i.i.d. initialization - Figures 1 and 3 of the paper
-    config_iid = config.scaling_initialization_exp
-    config_iid['model-config']['regularity'] = {'type': 'iid'}
+    config_iid = config.scaling_initialization_exp_iid
     filepath = 'figures/scaling_initialization/iid'
     os.makedirs(filepath, exist_ok=True)
 
@@ -182,9 +181,7 @@ if __name__ == '__main__':
     plot_histogram(results_hist, filepath)
 
     # Experiment with smooth initialization - Figures 4 and 5 of the paper
-    config_smooth = config.scaling_initialization_exp
-    config_smooth['model-config']['regularity'] = {
-        'type': 'rbf', 'value': 0.01}
+    config_smooth = config.scaling_initialization_exp_smooth
     filepath = 'figures/scaling_initialization/smooth'
     os.makedirs(filepath, exist_ok=True)
 

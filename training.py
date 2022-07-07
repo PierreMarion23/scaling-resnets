@@ -43,51 +43,47 @@ def fit(config_dict: dict, verbose: bool = False):
     :param verbose: print information about traning
     :return:
     """
-    name_template = config_dict['name']
+    name = config_dict['name'].replace('dataset', config_dict['dataset'])
 
-    for dataset in config_dict['dataset']:
-        name = name_template.replace('dataset', dataset)
+    train_dl, test_dl, first_coord, nb_classes = data.load_dataset(
+        config_dict['dataset'], vectorize=True)
 
-        train_dl, test_dl, first_coord, nb_classes = data.load_dataset(
-            dataset, vectorize=True)
+    model_class = getattr(models, config_dict['model'])
+    model = model_class(
+        first_coord=first_coord, final_width=nb_classes,
+        **config_dict['model-config'])
 
-        model_class = getattr(models, config_dict['model'])
-        model = model_class(
-            first_coord=first_coord, final_width=nb_classes,
-            **config_dict['model-config'])
+    gpu = 1 if torch.cuda.is_available() else 0
+    device = torch.device("cuda") if torch.cuda.is_available() \
+        else torch.device("cpu")
 
-        gpu = 1 if torch.cuda.is_available() else 0
-        device = torch.device("cuda") if torch.cuda.is_available() \
-            else torch.device("cpu")
+    trainer = pl.Trainer(
+            gpus=gpu,
+            max_epochs=config_dict['epochs'],
+            enable_checkpointing=False,
+            enable_progress_bar=verbose,
+            enable_model_summary=verbose
+        )
+    trainer.fit(model, train_dl)
 
-        trainer = pl.Trainer(
-                gpus=gpu,
-                max_epochs=config_dict['epochs'],
-                enable_checkpointing=False,
-                enable_progress_bar=verbose,
-                enable_model_summary=verbose
-            )
-        trainer.fit(model, train_dl)
+    print('Training finished')
+    true_targets, predictions = utils.get_true_targets_predictions(
+        test_dl, model, device)
+    accuracy = np.mean(np.array(true_targets) == np.array(predictions))
+    loss = utils.get_eval_loss(test_dl, model, device)
 
-        print('Training finished')
-        true_targets, predictions = utils.get_true_targets_predictions(
-            test_dl, model, device)
-        accuracy = np.mean(np.array(true_targets) == np.array(predictions))
-        loss = utils.get_eval_loss(test_dl, model, device)
+    metrics = {'test_accuracy': accuracy, 'test_loss': loss}
+    if verbose:
+        print(f'Test accuracy: {accuracy}')
+    results_dir = f'{os.getcwd()}/results/{name}/{str(time.time())}'
+    os.makedirs(results_dir, exist_ok=True)
+    trainer.save_checkpoint(f'{results_dir}/model.ckpt')
 
-        metrics = {'test_accuracy': accuracy, 'test_loss': loss}
-        if verbose:
-            print(f'Test accuracy: {accuracy}')
-        results_dir = f'{os.getcwd()}/results/{name}/{str(time.time())}'
-        os.makedirs(results_dir, exist_ok=True)
-        trainer.save_checkpoint(f'{results_dir}/model.ckpt')
+    with open(f'{results_dir}/metrics.pkl', 'wb') as f:
+        pickle.dump(metrics, f)
 
-        with open(f'{results_dir}/metrics.pkl', 'wb') as f:
-            pickle.dump(metrics, f)
-
-        with open(f'{results_dir}/config.pkl', 'wb') as f:
-            pickle.dump(config_dict, f)
-    return model
+    with open(f'{results_dir}/config.pkl', 'wb') as f:
+        pickle.dump(config_dict, f)
 
 
 def fit_parallel(exp_config: dict,
@@ -103,8 +99,8 @@ def fit_parallel(exp_config: dict,
     :param grid_regularity: grid of initialization regularities
     :param grid_beta: grid of scaling betas
     :param resume_experiment: if True, will look in the results folder if
-    the grid was partially explored and skip the experiments which were
-    already performed
+    the grid was partially explored and skip the runs which were already
+    performed
     :return:
     """
     if resume_experiment:

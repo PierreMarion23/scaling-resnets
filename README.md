@@ -18,8 +18,12 @@ pip3 install -r requirements.txt
 
 ## Reproducing the paper figures
 
-See the file ``config.py`` for all configurations of the experiments. The 
-scripts may take some time to run. To reduce computation time decrease the number 
+See the file ``config.py`` for all configurations of the experiments. 
+For a given experiment, the parameters that are common to all runs 
+are in ``config.py`` and the parameters that are swiped in a grid
+are at the end of each experiment file.
+
+The scripts may take some time to run. To reduce computation time decrease the number 
 of iterations ``niter`` or the number of epochs ``epoch`` in the configurations.
 
 Figures 1 to 5 can be reproduced with

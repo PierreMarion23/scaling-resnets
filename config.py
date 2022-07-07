@@ -1,17 +1,36 @@
 
-scaling_initialization_exp = {
+scaling_initialization_exp_iid = {
     'name': 'scaling_initialization_exp',
     'model': 'FullResnet',
     'model-config': {
         'width': 40,
         'activation': 'ReLU',
-        'regularity': {}
+        'regularity': {
+            {'type': 'iid'}
+        }
     },
     'niter': 50,
     'dim_input': 64,
     'nb_classes': 1,
 }
 
+scaling_initialization_exp_smooth = {
+    'name': 'scaling_initialization_exp',
+    'model': 'FullResnet',
+    'model-config': {
+        'width': 40,
+        'activation': 'ReLU',
+        'regularity': {
+            {
+                'type': 'rbf',
+                'value': 0.01
+            }
+        }
+    },
+    'niter': 50,
+    'dim_input': 64,
+    'nb_classes': 1,
+}
 
 histogram_initialization_exp = {
     'name': 'histogram_initialization_exp',
@@ -47,7 +66,6 @@ scaling_regularity_initialization_exp = {
 
 perf_weights_regularity = {
     'name': 'perf-weights-regularity-dataset',
-    'dataset': ['MNIST'],  # one of {'MNIST', 'FashionMNIST', 'CIFAR10', 'SVHN'}
     'model': 'SimpleResNet',
     'model-config': {
         'width': 30,
