@@ -81,6 +81,7 @@ def plot_results(results: list, filepath: Optional[str] = 'figures'):
     See Figure 7 of the paper.
 
     :param results: list of results
+    :param filepath: path to the folder where the figures should be saved
     :return:
     """
     df = pd.DataFrame(results)

@@ -82,6 +82,7 @@ def plot_histogram(results: list, filepath: Optional[str] = 'figures'):
     See Figure 2 of the paper.
 
     :param results: list of results
+    :param filepath: path to the folder where the figures should be saved
     :return:
     """
     df = pd.DataFrame(results)
@@ -111,6 +112,7 @@ def plot_results(results: list, col_order: list, filepath: Optional[str] = 'figu
 
     :param results: list of results
     :param col_order: grid of beta values for plotting
+    :param filepath: path to the folder where the figures should be saved
     :return:
     """
     df = pd.DataFrame(results)
