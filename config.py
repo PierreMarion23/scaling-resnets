@@ -5,9 +5,7 @@ scaling_initialization_exp_iid = {
     'model-config': {
         'width': 40,
         'activation': 'ReLU',
-        'regularity': {
-            {'type': 'iid'}
-        }
+        'regularity': {'type': 'iid'}
     },
     'niter': 50,
     'dim_input': 64,
@@ -21,10 +19,8 @@ scaling_initialization_exp_smooth = {
         'width': 40,
         'activation': 'ReLU',
         'regularity': {
-            {
-                'type': 'rbf',
-                'value': 0.01
-            }
+            'type': 'rbf',
+            'value': 0.01
         }
     },
     'niter': 50,
@@ -63,6 +59,20 @@ scaling_regularity_initialization_exp = {
     'nb_classes': 1,
 }
 
+weights_after_training = {
+    'name': 'weights-after-training',
+    'model': 'SimpleResNet',
+    'dataset': 'MNIST',
+    'model-config': {
+        'width': 30,
+        'depth': 1000,
+        'activation': 'ReLU',              # 'ReLU' or 'Tanh'
+        'lr': 0.01,
+        'step_lr': 1000
+    },
+    'epochs': 300,
+    'n_workers': 5
+}
 
 perf_weights_regularity = {
     'name': 'perf-weights-regularity-dataset',

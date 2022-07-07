@@ -36,12 +36,12 @@ def get_results(exp_name: str) -> list:
     return results
 
 
-def fit(config_dict: dict, verbose: bool = False):
+def fit(config_dict: dict, verbose: bool = False) -> pl.LightningModule:
     """Train a ResNet following the configuration.
 
     :param config_dict: configuration of the network and dataset
     :param verbose: print information about traning
-    :return:
+    :return: the trained model
     """
     name = config_dict['name'].replace('dataset', config_dict['dataset'])
 
@@ -84,6 +84,8 @@ def fit(config_dict: dict, verbose: bool = False):
 
     with open(f'{results_dir}/config.pkl', 'wb') as f:
         pickle.dump(config_dict, f)
+
+    return model
 
 
 def fit_parallel(exp_config: dict,
