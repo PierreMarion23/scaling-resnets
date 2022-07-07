@@ -1,16 +1,39 @@
 import copy
+import glob
 from multiprocessing import Pool
-import numpy as np
 import os
 import pickle
-import pytorch_lightning as pl
 import time
+from typing import Optional
+
+import numpy as np
+import pytorch_lightning as pl
 import torch
 
-import config
 import data
 import models
 import utils
+
+
+def get_results(exp_name: str) -> list:
+    """Read the results saved after execution of the training file.
+
+    :param exp_name: name of the configuration
+    :return: list of results
+    """
+    results = {'accuracy': [], 'regularity': [], 'lr': [], 'scaling': []}
+    for directory in glob.glob(os.path.join('results', exp_name, '*')):
+        with open(os.path.join(directory, 'config.pkl'), 'rb') as f:
+            config = pickle.load(f)
+            results['regularity'].append(
+                config['model-config']['regularity']['value'])
+            results['lr'].append(config['model-config']['lr'])
+            results['scaling'].append(config['model-config']['scaling_beta'])
+        with open(os.path.join(directory, 'metrics.pkl'), 'rb') as f:
+            metrics = pickle.load(f)
+            results['accuracy'].append(metrics['test_accuracy'])
+
+    return results
 
 
 def fit(config_dict: dict, verbose: bool = False):
@@ -67,28 +90,38 @@ def fit(config_dict: dict, verbose: bool = False):
     return model
 
 
-def fit_parallel(config: dict):
+def fit_parallel(exp_config: dict,
+                 grid_lr: list,
+                 grid_regularity: list,
+                 grid_beta: list,
+                 resume_experiment: Optional[bool] = False):
     """Train in parallel ResNet with different learning rate, scaling, and
     initialization.
 
     :param config: configuration of the network and dataset
+    :param grid_lr: grid of learning rates
+    :param grid_regularity: grid of initialization regularities
+    :param grid_beta: grid of scaling betas
+    :param resume_experiment: if True, will look in the results folder if
+    the grid was partially explored and skip the experiments which were
+    already performed
     :return:
     """
-    grid_lr = [0.0001, 0.001, 0.01, 0.1, 1.]
-    grid_regularity = np.linspace(0.1, 0.9, 10)
-    grid_beta = np.linspace(0.1, 0.9, 10)
-
+    if resume_experiment:
+        previous_results = get_results(exp_config['name'].replace('dataset', 'MNIST'))
+        found_experiments = [(previous_results['lr'][k], 
+                             previous_results['regularity'][k],
+                             previous_results['scaling'][k]) 
+                             for k in range(len(previous_results['lr']))
+                            ]
     list_configs = []
     for lr in grid_lr:
         for reg in grid_regularity:
             for beta in grid_beta:
-                config['model-config']['lr'] = lr
-                config['model-config']['regularity']['value'] = reg
-                config['model-config']['scaling_beta'] = beta
-                list_configs.append(copy.deepcopy(config))
-    with Pool(processes=config['n_workers']) as pool:
+                if (lr, reg, beta) not in found_experiments:
+                    exp_config['model-config']['lr'] = lr
+                    exp_config['model-config']['regularity']['value'] = reg
+                    exp_config['model-config']['scaling_beta'] = beta
+                    list_configs.append(copy.deepcopy(exp_config))
+    with Pool(processes=exp_config['n_workers']) as pool:
         pool.map(fit, list_configs)
-
-
-if __name__ == '__main__':
-    fit_parallel(config.perf_weights_regularity)

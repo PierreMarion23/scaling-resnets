@@ -1,45 +1,27 @@
 import distutils.spawn
-import glob
+
 from matplotlib import rc
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 import pandas as pd
-import pickle
 import seaborn as sns
 
+import config
+import training
+
+#TODO: rationalize the parameters of experiments that are in config.py versus
+# at the end of each file (in particular dataset). Put everything in config.py?
 
 sns.set(font_scale=1.5)
-
 if distutils.spawn.find_executable('latex'):
     rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
     rc('text', usetex=True)
 
 
-def get_results(exp_name: str) -> list:
-    """Read the results of test accuracy saved after execution of the training
-    file.
-
-    :param exp_name: name of the configuration
-    :return: list of results
-    """
-    results = {'accuracy': [], 'regularity': [], 'lr': [], 'scaling': []}
-    for directory in glob.glob(os.path.join('results', exp_name, '*')):
-        with open(os.path.join(directory, 'config.pkl'), 'rb') as f:
-            config = pickle.load(f)
-            results['regularity'].append(
-                config['model-config']['regularity']['value'])
-            results['lr'].append(config['model-config']['lr'])
-            results['scaling'].append(config['model-config']['scaling_beta'])
-        with open(os.path.join(directory, 'metrics.pkl'), 'rb') as f:
-            metrics = pickle.load(f)
-            results['accuracy'].append(metrics['test_accuracy'])
-
-    return results
-
-
 def plot_heatmap(results: list):
-    """Reproduces Figure 9 of the paper.
+    """Plot heatmaps which describes the performance,
+    as a function of scaling and initialization regularity.
+    See Figure 9 of the paper.
 
     :param results: list of results
     :return:
@@ -59,7 +41,11 @@ def plot_heatmap(results: list):
 
 if __name__ == '__main__':
     dataset = 'MNIST'
-    exp_name = f'perf-weights-regularity-{dataset}'
-    results = get_results(exp_name)
+    grid_lr = [0.0001, 0.001, 0.01, 0.1, 1.]
+    grid_regularity = np.linspace(0.1, 0.9, 10)
+    grid_beta = np.linspace(0.1, 0.9, 10)
+    exp_config = config.perf_weights_regularity
+    training.fit_parallel(config.perf_weights_regularity, grid_lr, grid_regularity, grid_beta)
+    exp_name = exp_config['name'].replace('dataset', dataset)
+    results = training.get_results(exp_name)
     plot_heatmap(results)
-

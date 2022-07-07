@@ -40,14 +40,7 @@ Figure 8 can be reproduced with
 python experiment_weights_after_training.py
 ```
 
-Figure 9 can be reproduced by first training a grid of networks with different 
-initializations and scalings on MNIST and CIFAR with
-
-```
-python training.py
-```
-
-Note that this script uses parallelization. Then, to plot the results,
+Figure 9 can be reproduced with
 
 ```
 python experiment_regularity_and_scaling_after_training.py
