@@ -21,13 +21,13 @@ if distutils.spawn.find_executable('latex'):
     rc('text', usetex=True)
 
 
-def run_experiment(config: dict, grid_beta: list, grid_reg: list) -> list:
+def run_experiment(config: dict, grid_scaling: list, grid_reg: list) -> list:
     """ Loop over a grid of initializations and scaling values, compute ratios
     between norms of the output and the input, as well as their respective
     gradients.
 
     :param config: configuration of the experiment
-    :param grid_beta: all values of scaling to loop over
+    :param grid_scaling: all values of scaling to loop over
     :param grid_reg: regularity of the process used to initialize the weights
     of the network
     :return:
@@ -43,9 +43,9 @@ def run_experiment(config: dict, grid_beta: list, grid_reg: list) -> list:
             model = FullResNet(
                 config['dim_input'], config['nb_classes'], **model_config)
 
-            for beta in grid_beta:
-                model.reset_scaling(beta)
-                for j in range(config['niter_beta']):
+            for scaling in grid_scaling:
+                model.reset_scaling(scaling)
+                for j in range(config['niter_scaling']):
 
                     x0 = torch.rand((1, config['dim_input']))
                     target = torch.rand((1,))
@@ -64,7 +64,7 @@ def run_experiment(config: dict, grid_beta: list, grid_reg: list) -> list:
                     h_L_grad = h_L.grad
 
                     results.append({
-                        'beta': beta,
+                        'scaling': scaling,
                         'regularity': reg,
                         'hidden_state_difference': float(
                             torch.norm(h_L - h_0) / torch.norm(h_0)),
@@ -135,8 +135,8 @@ if __name__ == '__main__':
     # Figure 7 of the paper
     config_heatmap = config.scaling_regularity_initialization_exp
 
-    grid_beta = list(np.linspace(0, 1.3, 70))
+    grid_scaling = list(np.linspace(0, 1.3, 70))
     grid_reg = list(np.linspace(0.05, 0.97, 51))
 
-    results = run_experiment(config_heatmap, grid_beta, grid_reg)
+    results = run_experiment(config_heatmap, grid_scaling, grid_reg)
     plot_results(results, filepath)

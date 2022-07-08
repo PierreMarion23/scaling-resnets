@@ -10,9 +10,6 @@ import seaborn as sns
 import config
 import training
 
-#TODO: change figure path for perf-weight-regularity.pdf.
-#TODO: homogeneize between scaling and scaling_beta and beta.
-
 sns.set(font_scale=1.5)
 
 if distutils.spawn.find_executable('latex'):
@@ -40,7 +37,7 @@ def run_experiment(exp_config: dict, filepath: Optional[str] = 'figures'):
     plt.plot(weight_example)
     plt.savefig(
         os.path.join(filepath, "example_weight_%.1f_%s.pdf" % 
-        (exp_config['model-config']['scaling_beta'], exp_config['model-config']['regularity']['type'])), 
+        (exp_config['model-config']['scaling'], exp_config['model-config']['regularity']['type'])), 
         bbox_inches='tight'
     )
     plt.show()
@@ -48,13 +45,12 @@ def run_experiment(exp_config: dict, filepath: Optional[str] = 'figures'):
 
 if __name__ == '__main__':
     exp_config = config.perf_weights_regularity
-    grid_beta_reg = [{'beta': 1, 'regularity': {'type': 'rbf', 'value': 0.01}},
-                   {'beta': 1, 'regularity': {'type': 'iid'}},
-                   {'beta': 0.5, 'regularity': {'type': 'iid'}}
+    grid_scaling_reg = [{'scaling': 1, 'regularity': {'type': 'rbf', 'value': 0.01}},
+                   {'scaling': 1, 'regularity': {'type': 'iid'}},
+                   {'scaling': 0.5, 'regularity': {'type': 'iid'}}
                    ]
     filepath = 'figures/weights_after_training'
     os.makedirs(filepath, exist_ok=True)
-    for beta_reg in grid_beta_reg:
-        exp_config['model-config']['scaling_beta'] = beta_reg['beta']
-        exp_config['model-config']['regularity'] = beta_reg['regularity']
+    for scaling_reg in grid_scaling_reg:
+        exp_config['model-config'] = scaling_reg
         run_experiment(exp_config, filepath)

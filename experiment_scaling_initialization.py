@@ -20,25 +20,25 @@ if distutils.spawn.find_executable('latex'):
 
 
 def run_experiment(
-        config: dict, grid_beta: list, grid_depth: list) -> list:
+        config: dict, grid_scaling: list, grid_depth: list) -> list:
     """ Loop over a grid of depths and scaling values, compare the norm of the
     last layer values to the initial one, as well as their respective
     gradients.
 
     :param config: configuration of the experiment
-    :param grid_beta: all values of scaling to loop over
+    :param grid_scaling: all values of scaling to loop over
     :param grid_depth: all depths of the ResNet to loop over
     :return:
     """
     results = []
-    for beta in grid_beta:
+    for scaling in grid_scaling:
         for depth in grid_depth:
             print(depth)
             for k in range(config['niter']):
                 if config['niter'] > 10**3 and k % 10 == 0:
                     print(k)
                 model_config = config['model-config']
-                model_config['scaling_beta'] = beta
+                model_config['scaling'] = scaling
                 model_config['depth'] = depth
 
                 x0 = torch.rand((1, config['dim_input']))
@@ -63,7 +63,7 @@ def run_experiment(
 
                 results.append({
                     'depth': depth,
-                    'beta': beta,
+                    'scaling': scaling,
                     'hidden_state_ratio': float(
                         torch.norm(h_L) / torch.norm(h_0)),
                     'hidden_state_difference': float(
@@ -111,7 +111,7 @@ def plot_results(results: list, col_order: list, filepath: Optional[str] = 'figu
     See Figures 1, 3, 4, 5 of the paper.
 
     :param results: list of results
-    :param col_order: grid of beta values for plotting
+    :param col_order: grid of scaling values for plotting
     :param filepath: path to the folder where the figures should be saved
     :return:
     """
@@ -166,17 +166,17 @@ if __name__ == '__main__':
     os.makedirs(filepath, exist_ok=True)
 
     grid_depth = np.linspace(10, 1e3, num=10, dtype=int)
-    grid_beta = [1.0, 0.25, 0.5]
+    grid_scaling = [1.0, 0.25, 0.5]
 
     results_iid = run_experiment(
-        config_iid, grid_beta, grid_depth)
+        config_iid, grid_scaling, grid_depth)
 
-    plot_results(results_iid, grid_beta, filepath)
+    plot_results(results_iid, grid_scaling, filepath)
 
     # Distribution of norms for i.i.d. initialization - Figure 2 of the paper
     config_hist = config.histogram_initialization_exp
     results_hist = run_experiment(
-        config_hist, [config_hist['model-config']['scaling_beta']],
+        config_hist, [config_hist['model-config']['scaling']],
         [config_hist['model-config']['depth']])
     plot_histogram(results_hist, filepath)
 
@@ -185,7 +185,7 @@ if __name__ == '__main__':
     filepath = 'figures/scaling_initialization/smooth'
     os.makedirs(filepath, exist_ok=True)
 
-    grid_beta = [2., 0.5, 1.]
+    grid_scaling = [2., 0.5, 1.]
     results_smooth = run_experiment(
-        config_smooth, grid_beta, grid_depth)
-    plot_results(results_smooth, grid_beta, filepath)
+        config_smooth, grid_scaling, grid_depth)
+    plot_results(results_smooth, grid_scaling, filepath)

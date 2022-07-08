@@ -98,7 +98,7 @@ class ResNet(pl.LightningModule, ABC):
 
         self.scaling_weight = torch.full(
             (self.depth,), 1 / (
-                    float(self.depth) ** model_config['scaling_beta']))
+                    float(self.depth) ** model_config['scaling']))
 
         # Uniform initialization on [-sqrt(3/width), sqrt(3/width)]
         self.init = create_linear_layer(
@@ -108,14 +108,14 @@ class ResNet(pl.LightningModule, ABC):
 
         self.loss = nn.CrossEntropyLoss()
 
-    def reset_scaling(self, beta: float):
-        """ Reset the scaling parameter as 1/depth ** beta
+    def reset_scaling(self, scaling: float):
+        """ Reset the scaling parameter as 1/depth ** scaling
 
-        :param beta: new value for the scaling parameter beta
+        :param scaling: new value for the scaling parameter
         :return:
         """
         self.scaling_weight = torch.full((self.depth,),
-                                         1 / (float(self.depth) ** beta))
+                                         1 / (float(self.depth) ** scaling))
 
     @abstractmethod
     def forward_hidden_state(self, hidden_state):

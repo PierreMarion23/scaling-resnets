@@ -34,7 +34,7 @@ histogram_initialization_exp = {
     'model-config': {
         'width': 100,
         'depth': 10 ** 3,
-        'scaling_beta': 0.5,
+        'scaling': 0.5,
         'activation': 'ReLU',
         'regularity': {'type': 'iid'}
     },
@@ -49,12 +49,12 @@ scaling_regularity_initialization_exp = {
     'model-config': {
         'width': 40,
         'depth': 1000,
-        'scaling_beta': 0.5,
+        'scaling': 0.5,
         'activation': 'ReLU',
         'regularity': {}
     },
     'niter_reg': 5,
-    'niter_beta': 10,
+    'niter_scaling': 10,
     'dim_input': 64,
     'nb_classes': 1,
 }
@@ -81,7 +81,7 @@ perf_weights_regularity = {
         'width': 30,
         'depth': 1000,
         'activation': 'ReLU',              # 'ReLU' or 'Tanh'
-        'scaling_beta': 1.,
+        'scaling': 1.,
         'regularity':
             {
                 'type': 'fbm',

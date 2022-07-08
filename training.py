@@ -28,7 +28,7 @@ def get_results(exp_name: str) -> list:
             results['regularity'].append(
                 config['model-config']['regularity']['value'])
             results['lr'].append(config['model-config']['lr'])
-            results['scaling'].append(config['model-config']['scaling_beta'])
+            results['scaling'].append(config['model-config']['scaling'])
         with open(os.path.join(directory, 'metrics.pkl'), 'rb') as f:
             metrics = pickle.load(f)
             results['accuracy'].append(metrics['test_accuracy'])
@@ -91,7 +91,7 @@ def fit(config_dict: dict, verbose: bool = False) -> pl.LightningModule:
 def fit_parallel(exp_config: dict,
                  grid_lr: list,
                  grid_regularity: list,
-                 grid_beta: list,
+                 grid_scaling: list,
                  resume_experiment: Optional[bool] = False):
     """Train in parallel ResNet with different learning rate, scaling, and
     initialization.
@@ -99,7 +99,7 @@ def fit_parallel(exp_config: dict,
     :param config: configuration of the network and dataset
     :param grid_lr: grid of learning rates
     :param grid_regularity: grid of initialization regularities
-    :param grid_beta: grid of scaling betas
+    :param grid_scaling: grid of scaling values
     :param resume_experiment: if True, will look in the results folder if
     the grid was partially explored and skip the runs which were already
     performed
@@ -115,11 +115,11 @@ def fit_parallel(exp_config: dict,
     list_configs = []
     for lr in grid_lr:
         for reg in grid_regularity:
-            for beta in grid_beta:
-                if (lr, reg, beta) not in found_experiments:
+            for scaling in grid_scaling:
+                if (lr, reg, scaling) not in found_experiments:
                     exp_config['model-config']['lr'] = lr
                     exp_config['model-config']['regularity']['value'] = reg
-                    exp_config['model-config']['scaling_beta'] = beta
+                    exp_config['model-config']['scaling'] = scaling
                     list_configs.append(copy.deepcopy(exp_config))
     with Pool(processes=exp_config['n_workers']) as pool:
         pool.map(fit, list_configs)
