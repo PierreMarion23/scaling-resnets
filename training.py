@@ -112,6 +112,8 @@ def fit_parallel(exp_config: dict,
                              previous_results['scaling'][k]) 
                              for k in range(len(previous_results['lr']))
                             ]
+    else:
+        found_experiments = []
     list_configs = []
     for lr in grid_lr:
         for reg in grid_regularity:

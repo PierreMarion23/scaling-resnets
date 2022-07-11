@@ -52,5 +52,6 @@ if __name__ == '__main__':
     filepath = 'figures/weights_after_training'
     os.makedirs(filepath, exist_ok=True)
     for scaling_reg in grid_scaling_reg:
-        exp_config['model-config'] = scaling_reg
+        exp_config['model-config']['scaling'] = scaling_reg['scaling']
+        exp_config['model-config']['regularity'] = scaling_reg['regularity']
         run_experiment(exp_config, filepath)

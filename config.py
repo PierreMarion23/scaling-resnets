@@ -77,6 +77,7 @@ weights_after_training = {
 perf_weights_regularity = {
     'name': 'perf-weights-regularity-dataset',
     'model': 'SimpleResNet',
+    'dataset': 'MNIST',
     'model-config': {
         'width': 30,
         'depth': 1000,
