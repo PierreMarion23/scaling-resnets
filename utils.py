@@ -82,10 +82,10 @@ def generate_fbm(N, H):
     return path, fGn
 
 
-def rbf_kernel(x1, x2, variance):
-    return np.exp(-1 * ((x1-x2) ** 2) / (2*variance))
+def rbf_kernel(x1, x2, bandwidth):
+    return np.exp(-1 * ((x1-x2) ** 2) / (2*bandwidth**2))
 
 
-def gram_matrix(depth, variance):
+def cov_matrix_for_rbf_kernel(depth, bandwidth):
     xs = np.linspace(0, 1, depth + 1)
-    return [[rbf_kernel(x1, x2, variance) for x2 in xs] for x1 in xs]
+    return [[rbf_kernel(x1, x2, bandwidth) for x2 in xs] for x1 in xs]

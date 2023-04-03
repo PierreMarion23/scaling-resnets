@@ -20,7 +20,7 @@ scaling_initialization_exp_smooth = {
         'activation': 'ReLU',
         'regularity': {
             'type': 'rbf',
-            'value': 0.01
+            'value': 0.1
         }
     },
     'niter': 50,

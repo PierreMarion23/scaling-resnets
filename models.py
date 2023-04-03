@@ -9,7 +9,7 @@ import utils
 
 
 def create_linear_layers_rbf(
-        depth: int, width: int, regularity: float) -> nn.Sequential:
+        depth: int, width: int, bandwidth: float) -> nn.Sequential:
     """Initialize the weights of a sequence of layers of fixed width as
     discretizations of a smooth Gaussian process with rbf kernel.
 
@@ -19,19 +19,13 @@ def create_linear_layers_rbf(
     :return: initialized layers of the ResNet as a nn.Sequential object
     """
     mean = [0] * (depth + 1)
-    gram = utils.gram_matrix(depth, regularity)
-    gp = np.random.default_rng().multivariate_normal(
-        mean, gram, (width, width))
-    increments = gp[:, :, 1:] - gp[:, :, :-1]
-    weights = torch.Tensor(
-        increments / (
-                np.mean(np.std(increments, axis=(0, 1))) * np.sqrt(width)
-        )
-    )
+    cov_matrix = utils.cov_matrix_for_rbf_kernel(depth, bandwidth)
+    weights = np.random.default_rng().multivariate_normal(
+        mean, cov_matrix, (width, width)) / np.sqrt(width)
     layers = [
         nn.Linear(width, width, bias=False) for _ in range(depth)]
     for k in range(depth):
-        layers[k].weight = torch.nn.Parameter(weights[:, :, k])
+        layers[k].weight = torch.nn.Parameter(torch.Tensor(weights[:, :, k]))
     return nn.Sequential(*layers)
 
 
@@ -60,8 +54,8 @@ def create_linear_layers_fbm(
 
 def create_linear_layer(
         in_features: int, out_features:int, bias: bool = True) -> nn.Linear:
-    """Initialize one linear layer with a symmetric uniform distribution on
-    [-sqrt(3/in_features), sqrt(3/in_features)]
+    """Initialize one linear layer with a normal distribution of
+    variance 1 / in_features
 
     :param in_features: size of the input to the layer
     :param out_features: size of the output of the layer
@@ -69,12 +63,11 @@ def create_linear_layer(
     :return:
     """
     layer = nn.Linear(in_features, out_features, bias=bias)
-    length = torch.sqrt(torch.Tensor([3. / in_features]))
     layer.weight = nn.Parameter(
-        2 * length * torch.rand((out_features, in_features)) - length)
+        torch.randn(out_features, in_features) / np.sqrt(in_features))
     if bias:
         layer.bias = nn.Parameter(
-            2 * length * torch.rand((out_features,)) - length)
+            torch.randn(out_features,) / np.sqrt(in_features)) 
     return layer
 
 

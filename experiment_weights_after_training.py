@@ -44,8 +44,8 @@ def run_experiment(exp_config: dict, filepath: Optional[str] = 'figures'):
 
 
 if __name__ == '__main__':
-    exp_config = config.perf_weights_regularity
-    grid_scaling_reg = [{'scaling': 1, 'regularity': {'type': 'rbf', 'value': 0.01}},
+    exp_config = config.weights_after_training
+    grid_scaling_reg = [{'scaling': 1, 'regularity': {'type': 'rbf', 'value': 0.1}},
                    {'scaling': 1, 'regularity': {'type': 'iid'}},
                    {'scaling': 0.5, 'regularity': {'type': 'iid'}}
                    ]
