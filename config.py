@@ -12,6 +12,34 @@ scaling_initialization_exp_iid = {
     'nb_classes': 1,
 }
 
+scaling_initialization_exp_iid_with_cov ={
+    'name': 'scaling_initialization_with_cov',
+    'model': 'FullResnet',
+    'model-config':{
+        'width': 40,
+        'activation': 'ReLU',
+        'regularity': {'type': 'iid_with_cov',
+                       'with_cov': True}
+    },
+    'niter': 30,
+    'dim_input': 64,
+    'nb_classes': 1
+}
+
+scaling_initialization_exp_iid_factor_in_distro = {
+    'name': 'scaling_initialization_factor_in_distro',
+    'model': 'FullResnet',
+    'model-config': {
+        'width': 40,
+        'activation': 'ReLU',
+        'regularity': {'type': 'iid'}
+    },
+    'in_distro': True,
+    'niter': 50,
+    'dim_input': 64,
+    'nb_classes': 1
+}
+
 scaling_initialization_exp_smooth = {
     'name': 'scaling_initialization_exp',
     'model': 'FullResnet',
@@ -20,6 +48,22 @@ scaling_initialization_exp_smooth = {
         'activation': 'ReLU',
         'regularity': {
             'type': 'rbf',
+            'value': 0.1
+        }
+    },
+    'niter': 50,
+    'dim_input': 64,
+    'nb_classes': 1,
+}
+
+scaling_initialization_exp_smooth_with_corr = {
+    'name': 'scaling_initialization_exp_with_corr',
+    'model': 'FullResnet',
+    'model-config':{
+        'width': 40,
+        'activation': 'ReLU',
+        'regularity': {
+            'type': 'rbf_with_corr',
             'value': 0.1
         }
     },

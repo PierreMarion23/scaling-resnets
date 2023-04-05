@@ -28,7 +28,17 @@ def create_linear_layers_rbf(
         layers[k].weight = torch.nn.Parameter(torch.Tensor(weights[:, :, k]))
     return nn.Sequential(*layers)
 
-
+def create_linear_layers_rbf_with_cov(
+        depth: int, width: int, bandwidth: float, cov: list[float]) -> nn.Sequential:
+    mean = [0] * (width*width*(depth+1))
+    cov_matrix = utils.cov_matrix_for_rgf_with_cov(width, depth, bandwidth, cov)
+    weights = (np.random.default_rng().multivariate_normal(
+        mean, cov_matrix) / np.sqrt(width)).reshape((width, width, depth+1))
+    layers = [
+        nn.Linear(width, width, bias=False) for _ in range(depth)]
+    for k in range(depth):
+        layers[k].weight = torch.nn.Parameter(torch.Tensor(weights[:, :, k]))
+    return nn.Sequential(*layers)
 def create_linear_layers_fbm(
         depth: int, width: int, hurst_index: float) -> nn.Sequential:
     """Initialize the weights of a sequence of layers of fixed width as
@@ -53,22 +63,60 @@ def create_linear_layers_fbm(
 
 
 def create_linear_layer(
-        in_features: int, out_features:int, bias: bool = True) -> nn.Linear:
+        in_features: int, out_features:int, bias: bool = True,
+        in_distro: bool = False, scaling_factor: float = 0.0) -> nn.Linear:
     """Initialize one linear layer with a normal distribution of
     variance 1 / in_features
 
     :param in_features: size of the input to the layer
     :param out_features: size of the output of the layer
     :param bias: whether to include a bias
+    :param in_distro: whether to put scaling factor in the distribution of the weight
+    :param scaling_factor: rescale the std of the distro of the weights only used if
+                           in_distro is set to be True
     :return:
     """
     layer = nn.Linear(in_features, out_features, bias=bias)
-    layer.weight = nn.Parameter(
-        torch.randn(out_features, in_features) / np.sqrt(in_features))
+    if in_distro:
+        layer.weight = nn.Parameter(
+            torch.normal(mean = torch.zeros(out_features, in_features),
+                         std = torch.full(size = (out_features, in_features),
+                                          fill_value=scaling_factor / np.square(in_features))
+                         )
+        )
+    else:
+        layer.weight = nn.Parameter(
+            torch.randn(out_features, in_features) / np.sqrt(in_features))
     if bias:
         layer.bias = nn.Parameter(
             torch.randn(out_features,) / np.sqrt(in_features)) 
     return layer
+
+def create_linear_layer_with_cov(
+        in_features: int, out_features: int, cov: np.array, depth: int,
+        bias: bool = True) -> nn.Sequential:
+    """Initialize one linear layer with a normal distribution of
+    variance 1 / in_features with covariance
+
+    :param in_features: size of the input to the layer
+    :param out_features: size of the output of the layer
+    :param depth: depth of the NN
+    :param bias: whether to include a bias
+    :param cov: covariance matrix for normal weight
+    :return
+    """
+    layers = [nn.Linear(in_features, out_features, bias=bias) for _ in range(depth)]
+    sample = np.random.multivariate_normal(
+        np.zeros(shape=in_features*out_features), cov, size=depth)
+    # print(sample[0, :])
+    for k in range(depth):
+        layers[k].weight = nn.Parameter(
+            torch.Tensor(sample[k, :].reshape((out_features, in_features))).to(torch.float)
+        )
+        if bias:
+            layers[k].bias = nn.Parameter(
+                torch.randn(out_features,) / np.sqrt(in_features))
+    return nn.Sequential(*layers)
 
 
 class ResNet(pl.LightningModule, ABC):
@@ -191,13 +239,26 @@ class FullResNet(ResNet):
         """
         super().__init__(first_coord, final_width, **model_config)
 
+        self.in_distro = True if model_config.get('in_distro') else False
+        self.cov = model_config.get('cov')
         if model_config['regularity']['type'] == 'iid':
             self.inner_weights = nn.Sequential(
                 *[create_linear_layer(self.width, self.width, bias=False)
                   for _ in range(self.depth)])
             self.outer_weights = nn.Sequential(
-                *[create_linear_layer(self.width, self.width, bias=False)
-                  for _ in range(self.depth)])
+                *[create_linear_layer(self.width, self.width, bias=False,
+                                      in_distro = self.in_distro,
+                                      scaling_factor = self.scaling_weight[k])
+                  for k in range(self.depth)])
+        elif model_config['regularity']['type'] == 'iid_with_corr':
+            self.inner_weights = create_linear_layer_with_cov(
+                self.width, self.width, cov=model_config['cov'],
+                depth=self.depth, bias=False
+            )
+            self.outer_weights = create_linear_layer_with_cov(
+                self.width, self.width, cov=model_config['cov'],
+                depth=self.depth, bias=False
+            )
         elif model_config['regularity']['type'] == 'fbm':
             self.inner_weights = create_linear_layers_fbm(
                 self.depth, self.width, model_config['regularity']['value'])
@@ -208,6 +269,15 @@ class FullResNet(ResNet):
                 self.depth, self.width, model_config['regularity']['value'])
             self.outer_weights = create_linear_layers_rbf(
                 self.depth, self.width, model_config['regularity']['value'])
+        elif model_config['regularity']['type'] == 'rgf_with_corr':
+            self.inner_weights = create_linear_layers_rbf_with_cov(
+                self.depth, self.width, model_config['regularity']['value'],
+                cov=model_config['cov']
+            )
+            self.outer_weights = create_linear_layers_rbf_with_cov(
+                self.depth, self.width, model_config['regularity']['value'],
+                cov=model_config['cov']
+            )
         else:
             raise ValueError(
                 "argument regularity['type'] should be one of 'iid', 'fbm', "
@@ -224,11 +294,17 @@ class FullResNet(ResNet):
         :param hidden_state: output of the initial layer
         :return: output of the last hidden layer
         """
-        for k in range(self.depth):
-            hidden_state = hidden_state + (
-                    self.scaling_weight[k] *
-                    self.outer_weights[k](
-                        self.activation(self.inner_weights[k](hidden_state))
-                    )
-            )
+        if self.in_distro:
+            for k in range(self.depth):
+                hidden_state = hidden_state + (
+                    self.outer_weights[k](self.activation(self.inner_weights[k](hidden_state)))
+                )
+        else:
+            for k in range(self.depth):
+                hidden_state = hidden_state + (
+                        self.scaling_weight[k] *
+                        self.outer_weights[k](
+                            self.activation(self.inner_weights[k](hidden_state))
+                        )
+                )
         return hidden_state

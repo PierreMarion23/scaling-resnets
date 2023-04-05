@@ -1,7 +1,7 @@
 import numpy as np
 import pytorch_lightning as pl
 import torch
-
+from sklearn.gaussian_process.kernels import RBF
 
 def get_prediction(data, model: pl.LightningModule, device):
     model.eval() # Deactivates gradient graph construction during eval.
@@ -89,3 +89,24 @@ def rbf_kernel(x1, x2, bandwidth):
 def cov_matrix_for_rbf_kernel(depth, bandwidth):
     xs = np.linspace(0, 1, depth + 1)
     return [[rbf_kernel(x1, x2, bandwidth) for x2 in xs] for x1 in xs]
+
+
+def rbf_kernel_multivariate(x1, x2, bandwidth, cov):
+    return np.exp(-1 * (x1-x2).dot(cov).dot(x1-x2)/(2*bandwidth**2))
+def cov_matrix_for_rgf_with_cov(width, depth, bandwidth, cov):
+    xs = np.linspace(0, 1, depth+1)
+    cov_res = [[0] * len(xs) for _ in xs]
+    for i, x1 in enumerate(xs):
+        for j, x2 in enumerate(xs):
+            x1_multi = np.array([x1]*(width*width))
+            x2_multi = np.array([x2]*(width*width))
+            cov_res[i][j] = rbf_kernel_multivariate(x1_multi, x2_multi, bandwidth, cov)
+    cov_new = np.concatenate([np.concatenate(row, axis = 1) for row in cov_res])
+    return cov_new
+def create_cov_matrix(size, seed):
+    """
+    Create a semi-definite positive matrix with diagonal 1
+    """
+    rng = np.random.default_rng(seed=seed)
+    A = rng.random((size*size, size*size))
+    return np.corrcoef(A)
