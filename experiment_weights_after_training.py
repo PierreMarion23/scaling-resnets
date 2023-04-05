@@ -40,7 +40,7 @@ def run_experiment(exp_config: dict, filepath: Optional[str] = 'figures'):
         (exp_config['model-config']['scaling'], exp_config['model-config']['regularity']['type'])), 
         bbox_inches='tight'
     )
-    plt.show()
+    plt.close()
 
 
 if __name__ == '__main__':
