@@ -114,7 +114,7 @@ weights_after_training = {
         'lr': 0.01,
         'step_lr': 1000
     },
-    'epochs': 300,
+    'epochs': 10,
     'n_workers': 5
 }
 
