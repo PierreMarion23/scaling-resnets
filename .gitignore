@@ -4,4 +4,8 @@ __pycache__/
 datasets/
 figures/
 results/
+pickles/
+.idea/
 lightning_logs/
+volterra_sim.py
+volterra.py

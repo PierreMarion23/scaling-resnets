@@ -38,6 +38,7 @@ def run_experiment(
                 if config['niter'] > 10**3 and k % 10 == 0:
                     print(k)
                 model_config = config['model-config']
+                model_config['half'] = True
                 model_config['scaling'] = scaling
                 model_config['depth'] = depth
 
@@ -46,6 +47,7 @@ def run_experiment(
                 model = FullResNet(
                     config['dim_input'], config['nb_classes'],
                     **model_config)
+                print(model.outer_weights)
 
                 h_0 = model.init(x0)
                 h_L = model.forward_hidden_state(h_0)
@@ -163,29 +165,30 @@ if __name__ == '__main__':
     # Experiment with i.i.d. initialization - Figures 1 and 3 of the paper
     config_iid = config.scaling_initialization_exp_iid
     filepath = 'figures/scaling_initialization/iid'
-    os.makedirs(filepath, exist_ok=True)
+    # os.makedirs(filepath, exist_ok=True)
 
-    grid_depth = np.linspace(10, 1e3, num=10, dtype=int)
-    grid_scaling = [1.0, 0.25, 0.5]
-
+    # grid_depth = np.linspace(10, 1e3, num=10, dtype=int)
+    # grid_scaling = [1.0, 0.25, 0.5]
+    grid_depth = [100]
+    grid_scaling = [1.0]
     results_iid = run_experiment(
         config_iid, grid_scaling, grid_depth)
 
-    plot_results(results_iid, grid_scaling, filepath)
+    # plot_results(results_iid, grid_scaling, filepath)
 
-    # Distribution of norms for i.i.d. initialization - Figure 2 of the paper
-    config_hist = config.histogram_initialization_exp
-    results_hist = run_experiment(
-        config_hist, [config_hist['model-config']['scaling']],
-        [config_hist['model-config']['depth']])
-    plot_histogram(results_hist, filepath)
+    # # Distribution of norms for i.i.d. initialization - Figure 2 of the paper
+    # config_hist = config.histogram_initialization_exp
+    # results_hist = run_experiment(
+    #     config_hist, [config_hist['model-config']['scaling']],
+    #     [config_hist['model-config']['depth']])
+    # plot_histogram(results_hist, filepath)
 
-    # Experiment with smooth initialization - Figures 4 and 5 of the paper
-    config_smooth = config.scaling_initialization_exp_smooth
-    filepath = 'figures/scaling_initialization/smooth'
-    os.makedirs(filepath, exist_ok=True)
+    # # Experiment with smooth initialization - Figures 4 and 5 of the paper
+    # config_smooth = config.scaling_initialization_exp_smooth
+    # filepath = 'figures/scaling_initialization/smooth'
+    # os.makedirs(filepath, exist_ok=True)
 
-    grid_scaling = [2., 0.5, 1.]
-    results_smooth = run_experiment(
-        config_smooth, grid_scaling, grid_depth)
-    plot_results(results_smooth, grid_scaling, filepath)
+    # grid_scaling = [2., 0.5, 1.]
+    # results_smooth = run_experiment(
+    #     config_smooth, grid_scaling, grid_depth)
+    # plot_results(results_smooth, grid_scaling, filepath)

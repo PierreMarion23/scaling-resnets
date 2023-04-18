@@ -164,7 +164,7 @@ def plot_results(results: list, col_order: list, filepath: Optional[str] = 'figu
 
 
 if __name__ == '__main__':
-
+    
     config_iid = config.scaling_initialization_exp_iid_with_cov
     cov = 1/config_iid['model-config']['width'] * \
         utils.create_cov_matrix(config_iid['model-config']['width'], seed=SEED)

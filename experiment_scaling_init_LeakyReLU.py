@@ -8,13 +8,14 @@ import numpy as np
 import pandas as pd
 import seaborn as sns
 import torch
-import utils
+
 import config
-import pickle 
+import utils
 from models import FullResNet
 from typing import Final
 
-SEED: Final[int] = 42
+SEED : Final[int] = 42
+
 sns.set(font_scale=1.5)
 
 if distutils.spawn.find_executable('latex'):
@@ -23,7 +24,7 @@ if distutils.spawn.find_executable('latex'):
 
 
 def run_experiment(
-        config: dict, grid_scaling: list, grid_depth: list, cov) -> list:
+        config: dict, grid_scaling: list, grid_depth: list) -> list:
     """ Loop over a grid of depths and scaling values, compare the norm of the
     last layer values to the initial one, as well as their respective
     gradients.
@@ -35,7 +36,6 @@ def run_experiment(
     """
     results = []
     for scaling in grid_scaling:
-        print(f"beta: {scaling}")
         for depth in grid_depth:
             print(depth)
             for k in range(config['niter']):
@@ -44,7 +44,6 @@ def run_experiment(
                 model_config = config['model-config']
                 model_config['scaling'] = scaling
                 model_config['depth'] = depth
-                model_config['cov'] = cov
 
                 x0 = torch.rand((1, config['dim_input']))
                 target = torch.rand((1,))
@@ -52,7 +51,6 @@ def run_experiment(
                     config['dim_input'], config['nb_classes'],
                     **model_config)
 
-                print(f"round {k}")
                 h_0 = model.init(x0)
                 h_L = model.forward_hidden_state(h_0)
                 output = model.final(h_L)
@@ -79,8 +77,36 @@ def run_experiment(
                     'gradient_difference': float(
                         torch.norm(h_L_grad - h_0_grad) / torch.norm(h_L_grad))
                 })
-                print(f"round {k} finished")
     return results
+
+
+def plot_histogram(results: list, filepath: Optional[str] = 'figures'):
+    """Plot an histogram of ratios between initial and final norms,
+    and initial and final gradients. The depth L is fixed.
+    See Figure 2 of the paper.
+
+    :param results: list of results
+    :param filepath: path to the folder where the figures should be saved
+    :return:
+    """
+    df = pd.DataFrame(results)
+    df.columns = ['depth', r'$\beta$', 'hidden_state_ratio',
+                  'hidden_state_difference', 'gradient_ratio',
+                  'gradient_difference']
+
+    g = sns.histplot(x='hidden_state_ratio', data=df)
+    g.set_xlabel(r'$\|h_L\| / \|h_0\|$')
+    plt.savefig(os.path.join(filepath, 'hist_norm_initialization.pdf'),
+                bbox_inches='tight')
+    plt.show()
+
+    g = sns.histplot(x='gradient_ratio', data=df)
+    g.set_xlabel(
+        r'$ \|\frac{\partial \mathcal{L}}{\partial h_0}\| / '
+        r'\|\frac{\partial \mathcal{L}}{\partial h_L}\|$')
+    plt.savefig(os.path.join(filepath, 'hist_gradient_initialization.pdf'),
+                bbox_inches='tight')
+    plt.show()
 
 
 def plot_results(results: list, col_order: list, filepath: Optional[str] = 'figures'):
@@ -137,19 +163,15 @@ def plot_results(results: list, col_order: list, filepath: Optional[str] = 'figu
 
 
 if __name__ == '__main__':
-    # Experiment with smooth initialization - Figures 4 and 5 of the paper
-    config_smooth = config.scaling_initialization_exp_smooth_with_corr
-    filepath = 'figures/scaling_initialization/smooth'
+    
+    config_iid = config.scaling_initialization_exp_iid_leakyReLU
+    filepath = 'figures/scaling_initialization/iid/leakyReLU'
     os.makedirs(filepath, exist_ok=True)
-    cov = 1/config_smooth['model-config']['width'] * \
-        utils.create_cov_matrix(config_smooth['model-config']['width'], seed=SEED)
-    pickle_filepath = 'pickles/scaling_initialization_cov_matrices'
-    os.makedirs(pickle_filepath, exist_ok=True)
-    with open("pickles/scaling_initialization_cov_matrices/rbf_cov.pkl", "wb") as f:
-        pickle.dump(cov, f)
-    print(cov)
-    grid_scaling = [2., 0.5, 1.]
+
     grid_depth = np.linspace(10, 1e3, num=10, dtype=int)
-    results_smooth = run_experiment(
-        config_smooth, grid_scaling, grid_depth, cov = cov)
-    plot_results(results_smooth, grid_scaling, filepath)
+    grid_scaling = [1.0, 0.25, 0.5]
+
+    results_iid = run_experiment(
+        config_iid, grid_scaling, grid_depth)
+
+    plot_results(results_iid, grid_scaling, filepath)

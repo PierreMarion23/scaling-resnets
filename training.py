@@ -8,7 +8,9 @@ from typing import Optional
 
 import numpy as np
 import pytorch_lightning as pl
+from pytorch_lightning import Callback, seed_everything
 import torch
+from torch.utils.data import DataLoader
 
 import data
 import models
@@ -125,3 +127,54 @@ def fit_parallel(exp_config: dict,
                     list_configs.append(copy.deepcopy(exp_config))
     with Pool(processes=exp_config['n_workers']) as pool:
         pool.map(fit, list_configs)
+
+def multiple_fit(
+        model_list: list, seed: int, epochs: int, data_train, data_test, 
+        verbose: bool = False) -> list:
+    """Initialize and fit halved and whole model
+
+    :param config: configuration of the model
+    :param seed: the seed of the randomness
+    :param data_train: training data
+    :param data_test: test data
+    :param verbose: enable verbosity
+
+    :return: the trained halved and whole model
+    """
+    # data_train = gen_data(n, config['dim_input'])
+    # data_test = gen_data(n_test, config['dim_input'])
+    for model in model_list:
+        # print(model.weights[0].weight)
+        gpu = 1 if torch.cuda.is_available() else 0
+        device = torch.device("cuda") if torch.cuda.is_available() \
+            else torch.device("cpu")
+        seed_everything(seed, workers=True)
+        trainer = pl.Trainer(
+                gpus=gpu,
+                max_epochs= epochs,
+                enable_checkpointing=False,
+                enable_progress_bar=verbose,
+                enable_model_summary=verbose,
+                deterministic = True
+            )
+        train_dl = DataLoader(data_train)
+        test_dl = DataLoader(data_test)
+        trainer.fit(model, train_dl)
+        print('Training finished')
+        # true_targets, predictions = utils.pred(test_dl, model, device)
+        # mse = np.sqrt(np.mean((
+        #     np.array(true_targets) - np.array(predictions))**2))
+        # loss = utils.get_eval_loss(test_dl, model, device)
+
+        # metrics = {'test_MSE': mse, 'test_loss': loss}
+        # if verbose:
+        #     print(f'Test MSE: {mse}')
+
+        results_dir = f'{os.getcwd()}/results/ODE/{str(time.time())}'
+        os.makedirs(results_dir, exist_ok=True)
+        trainer.save_checkpoint(f'{results_dir}/model.ckpt')
+
+        # with open(f'{results_dir}/metrics_{half}.pkl', 'wb') as f:
+        #     pickle.dump(metrics, f)
+        # print(model.weights[0].weight)
+    return 
