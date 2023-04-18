@@ -4,6 +4,7 @@ import torch
 import os
 import pickle
 import matplotlib.pyplot as plt
+from typing import Optional, List, Dict
 
 def get_prediction(data, model: pl.LightningModule, device):
     model.eval() # Deactivates gradient graph construction during eval.
@@ -170,10 +171,21 @@ def generate_heston_paths(T, hurst, theta=0.02, lam=0.3, v_0=0.02, mu=0.3,
     
     return Vs
 
-def max_norm(l1: list, l2: list):
+def max_norm(l1: List[torch.Tensor], 
+             l2: Optional[List[torch.Tensor]] = None) -> float:
+    diff = 0
+    if not l2 is None:
+        for v1, v2 in zip(l1, l2):
+            diff = max(diff, torch.norm(v1-v2).item())
+    else:
+        for v1 in l1:
+            diff = max(diff, torch.norm(v1).item())
+    return diff
+
+def max_norm_prop(l1:list, l2:list):
     diff = 0
     for v1, v2 in zip(l1, l2):
-        diff = max(diff, torch.norm(v1-v2).item())
+        diff = max(diff, torch.norm(v1-v2).item()/torch.norm(v2).item())
     return diff
 
 def mean_norm(l1:list, l2:list):

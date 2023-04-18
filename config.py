@@ -209,7 +209,7 @@ NTK_exp = {
     'dim_input': 1,
     'epochs': 10,
     'n_workers': 5,
-    'nb_classes': 3
+    'nb_classes': 1
 }
 
 weights_after_training = {

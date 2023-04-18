@@ -301,7 +301,8 @@ class LinearResNet(ResNet):
 
 class SimpleResNet(ResNet):
     def __init__(
-            self, first_coord: int, final_width:int, **model_config: dict):
+            self, first_coord: int, final_width:int, seed: Optional[int] = None,
+            half: Optional[bool] = None, **model_config: dict):
         """Residual neural network, subclass of ResNet where the weights can
         be initialized as discretizations of stochastic processes and the
         update function consists of a non-linearity and one matrix
@@ -311,6 +312,9 @@ class SimpleResNet(ResNet):
         :param final_width: size of the output
         :param model_config: configuration dictionary with hyperparameters
         """
+        if not seed is None:
+            torch.manual_seed(seed)
+            torch.cuda.manual_seed(seed)
         super().__init__(first_coord, final_width, **model_config)
 
         if model_config['regularity']['type'] == 'iid':
@@ -322,7 +326,8 @@ class SimpleResNet(ResNet):
                 self.depth, self.width, model_config['regularity']['value'])
         elif model_config['regularity']['type'] == 'rbf':
             self.outer_weights = create_linear_layers_rbf(
-                self.depth, self.width, model_config['regularity']['value'])
+                self.depth, self.width, model_config['regularity']['value'],
+                seed)
         elif model_config['regularity']['type'] == 'volterra':
             self.outer_weights = create_linear_layer_volterra(
                 self.depth, self.width, 
@@ -333,6 +338,12 @@ class SimpleResNet(ResNet):
             raise ValueError(
                 "argument regularity['type'] should be one of 'iid', 'fbm', "
                 "'rbf'")
+        self.outer_weights = self.outer_weights if not half \
+            else nn.Sequential(
+            *[self.outer_weights[k] if k%2 == 0 else None for k in range(self.depth)])
+        d = 2 if half else 1
+        self.scaling_weight = torch.full(
+            (self.depth,), (d / (float(self.depth)) ** model_config['scaling']))
 
     def forward_hidden_state(self, hidden_state: torch.Tensor) -> torch.Tensor:
         """Function that outputs the last hidden state, useful to compare norms
@@ -359,10 +370,11 @@ class FullResNet(ResNet):
         :param final_width: size of the output
         :param model_config: configuration dictionary with hyperparameters
         """
-        super().__init__(first_coord, final_width, **model_config)
         if not seed is None:
             torch.manual_seed(seed)
             torch.cuda.manual_seed(seed)
+        super().__init__(first_coord, final_width, **model_config)
+
         self.half = half
         self.in_distro = True if model_config.get('in_distro') else False
         self.cov = model_config.get('cov')
@@ -391,9 +403,11 @@ class FullResNet(ResNet):
                 self.depth, self.width, model_config['regularity']['value'])
         elif model_config['regularity']['type'] == 'rbf':
             self.inner_weights = create_linear_layers_rbf(
-                self.depth, self.width, model_config['regularity']['value'])
+                self.depth, self.width, model_config['regularity']['value'],
+                seed=seed)
             self.outer_weights = create_linear_layers_rbf(
-                self.depth, self.width, model_config['regularity']['value'])
+                self.depth, self.width, model_config['regularity']['value'],
+                seed=seed)
         elif model_config['regularity']['type'] == 'rbf_with_corr':
             self.inner_weights = create_linear_layers_rbf_with_cov(
                 self.depth, self.width, model_config['regularity']['value'],
@@ -427,6 +441,10 @@ class FullResNet(ResNet):
                 *[self.outer_weights[k] if k%2==0 else None
                   for k in range(self.depth)]
             )
+
+        d = 2 if half else 1
+        self.scaling_weight = torch.full(
+            (self.depth,), (d / (float(self.depth)) ** model_config['scaling']))
 
         self.final = create_linear_layer(
             self.width, self.final_width, bias=False)

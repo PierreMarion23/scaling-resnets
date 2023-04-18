@@ -105,12 +105,14 @@ def compute_Nvs2N_diff(
     diffN_max = max_norm(modelN_outer_weights, modelN_outer_weights_init)
     diffN_mean = np.sqrt(
         mean_norm(modelN_outer_weights, modelN_outer_weights_init))
+    max_weight2N = max_norm(list(model2N.parameters()))
     return {'depth': depth, 'activation': activation, 'scaling': scaling,
             'type': initialization_type,
             'weight_diff_max': diffNvs2N_max,
             'weight_diff_mean': diffNvs2N_mean,
             'weight_diff_init_after_max':diffN_max,
-            'weight_diff_init_after_mean': diffN_mean}
+            'weight_diff_init_after_mean': diffN_mean,
+            'max_weight2N': max_weight2N}
 
 
 def decomp(c):
@@ -123,12 +125,15 @@ def plot_results(results: List[Dict], scaling_order: List[float],
     df = pd.DataFrame(results)
     df.columns = ['depth', 'activ', 'scaling',
                   'type', 'weight_diff_max', 'weight_diff_mean',
-                  'init_diff_max', 'init_diff_mean']
-
+                  'init_diff_max', 'init_diff_mean', 'max_weight2N']
+    df['weight_diff_max_prop'] = df['weight_diff_max']/df['max_weight2N']
+    df['weight_diff_mean_prop'] = df['weight_diff_mean']/df['max_weight2N']
     #df_log = df.apply(np.log)
     for t in init_order:
         for norm in ['weight_diff_max', 
                      'weight_diff_mean',
+                     'weight_diff_max_prop',
+                     'weight_diff_mean_prop',
                      'init_diff_max', 
                      'init_diff_mean']:
             g = sns.relplot(
