@@ -129,7 +129,8 @@ def fit_parallel(exp_config: dict,
         pool.map(fit, list_configs)
 
 def multiple_fit(
-        model_list: list, seed: int, epochs: int, data_train, data_test, 
+        model_list: list, seed: int, epochs: int, data_train, data_test,
+        filepath: Optional[str] = 'logs/NTK',
         verbose: bool = False) -> list:
     """Initialize and fit halved and whole model
 
@@ -143,12 +144,17 @@ def multiple_fit(
     """
     # data_train = gen_data(n, config['dim_input'])
     # data_test = gen_data(n_test, config['dim_input'])
+    os.makedirs(filepath, exist_ok=True)
     for model in model_list:
         # print(model.weights[0].weight)
         gpu = 1 if torch.cuda.is_available() else 0
         device = torch.device("cuda") if torch.cuda.is_available() \
             else torch.device("cpu")
         seed_everything(seed, workers=True)
+        logger = pl.loggers.CSVLogger(
+            save_dir=filepath,
+            name='ntk_exp'
+        )
         trainer = pl.Trainer(
                 gpus=gpu,
                 max_epochs= epochs,

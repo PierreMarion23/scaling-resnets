@@ -1,3 +1,6 @@
+"""Performing an experiment on the convergence towards an ODE with linear (identity)
+activation function.
+"""
 import distutils.spawn
 
 import os
@@ -27,7 +30,7 @@ NUM_TEST: Final[int] = 200
 WIDTH: Final[int] = 40
 SEED: Final[int] = 42
 
-#sns.set(font_scale=1.5)
+sns.set(font_scale=1.5)
 
 if distutils.spawn.find_executable('latex'):
     rc('font', **{'family': 'serif', 'serif': ['Computer Modern']})
@@ -46,12 +49,13 @@ def compute_Nvs2N_diff(
         scaling: float, init: str, seed: int, 
         train_data: Dataset, test_data: Dataset, 
         verbose: bool = False) -> Dict:
-    """Initialize, fit and compute their weight difference after training
+    """Initialize, fit and compute the weight difference after training
     halved and whole models given the depth.
 
     :param config: configuration of the model
     :param depth: depth of the model
     :param niter: the number of iteration
+    :param scaling: the power to the scaling factor
     :param seed: the seed of the randomness
     :param train_data: the training data
     :param test_data: the test data
@@ -96,6 +100,21 @@ def compute_Nvs2N_diff(
 def compute_Nvs0_diff(
         config: dict, depth: int, niter: int, scaling: float,
         seed: int, train_data, test_data, verbose: bool = False) -> Dict:
+    """Comparing the weight difference between an iid initialized model
+    and a model starting with weight of all zeros
+
+    :param config: configuration of the models
+    :param depth: depth of the model
+    :param niter: the number of the iteration
+    :param scaling: the power to the scaling factor
+    :param seed: setting a seed for the randomness
+    :param train_data: the training data
+    :param test_data: the testing or validation data
+    :param verbose: enable additional information to show while running the
+    experiment
+
+    :return: dictionary containing the results
+    """
     config['model-config']['depth'] = depth
     config['model-config']['scaling'] = scaling
     print(depth)
@@ -130,20 +149,18 @@ def run_test1(config: Dict, depth_list: List[int], scaling_list: List[float],
 
     :param config: configuration dictionary of the model
     :param depth_list: list of depth
+    :param scaling_list: list of the power to the scaling factor
+    :param init_list: list of initialization methods
     :param num_test: Number of test data
     :param num_train: Number of train data
     :param verbose: enable verbosity
     
     :return: list of containing the information of depth and weight difference
     """
-    # try:
-    #     set_start_method('spawn')
-    # except RuntimeError:
-    #     pass
-    # for depth in depth_list:
-    #     for scaling in scaling_list:
-    #         for init in ['iid', 'smooth']:
     results = []
+    # Here we generate all the data and seed at once
+    # Since we will be resetting a seed while performing multiple fit
+    # This would (hopefully) preserve the randomness of data 
     res_list = [[(copy.deepcopy(config), depth, n, scaling,
                 init, np.random.randint(999999), 
                 gen_data(num_train, config['dim_input']), 
@@ -156,10 +173,6 @@ def run_test1(config: Dict, depth_list: List[int], scaling_list: List[float],
     for item in res_list:
         res = list(map(decomp, item))
         results.extend(res)
-    
-                # with Pool(processes=config['n_workers']) as pool:
-                #     res = pool.map(decomp, res_list)
-                # res_all.extend(res)
     return results
 
 def decomp2(c):
@@ -168,6 +181,18 @@ def decomp2(c):
 def run_test2(config: dict, depth_list: list, 
              num_test: int = NUM_TEST, num_train: int = NUM_DATA,
              verbose: bool = False) -> List[Dict]:
+    """Perform the experiment on ODE convergence parallely
+
+    :param config: configuration dictionary of the model
+    :param depth_list: list of depth
+    :param scaling_list: list of the power to the scaling factor
+    :param init_list: list of initialization methods
+    :param num_test: Number of test data
+    :param num_train: Number of train data
+    :param verbose: enable verbosity
+    
+    :return: list of containing the information of depth and weight difference
+    """
     res_list = [(copy.deepcopy(config), depth, n, 
                  np.random.randint(99999), 
                  gen_data(num_train, config['dim_input']), 
@@ -179,19 +204,23 @@ def run_test2(config: dict, depth_list: list,
     res = pool.map(decomp2, res_list)
     pool.close()
     pool.join()
-    #res = list(map(decomp2, res_list))
-    # with Pool(processes=config['n_workers']) as pool:
-    #     res = pool.map(decomp2, res_list)
     return res
     
 def plot_results(results: list, scaling_order: list, init_order: List[str],
                  filepath: Optional[str] = 'figures', 
-                 exp_name: Optional[str] = 'test'):
+                 exp_name: Optional[str] = 'test') -> None:
+    """Plotting the result of previous experiment
+
+    :param results: the list of results given by the experiment
+    :param scaling_order: the order os the scaling factor in teh final graph
+    :param init_order: the order of the initialization showing in the final graph
+    :param filepath: the path to the graph
+    :param exp_name: the name of the experience that will be added to the 
+    graph file name
+    """
     df = pd.DataFrame(results)
     df.columns = ['depth', 'scaling', 'type', 
                   'weight_diff_max', 'weight_diff_mean']
-
-    #df_log = df.apply(np.log)
     for norm in ['weight_diff_max', 
                     'weight_diff_mean']:
         g = sns.relplot(
@@ -216,25 +245,32 @@ def plot_results(results: list, scaling_order: list, init_order: List[str],
         print(f'{norm}_linear_{exp_name}.pdf saved!')
     
 if __name__ == "__main__":
+    # To preserve reproducibility, we preselect a seed and set every rng possibly used
+    # so that they all reset to the same state at the beginning of the experiment
     np.random.seed(SEED)
     torch.manual_seed(SEED)
     torch.cuda.manual_seed(SEED)
     pl.seed_everything(SEED)
 
+    # Set up the model configuration and paths to the storage of the results
     model_config = config.ODE_convergence_exp_iid
-    filepath_pickle = 'pickles/ODE_convergence/linear'
-    pickle_name = 'diff_long.pkl'
-    filepath_figures = 'figures/ODE_convergence/linear'
-    exp_name = 'long'
+    filepath_pickle = 'pickles/ODE_convergence/linear/test'
+    filepath_figures = 'figures/ODE_convergence/linear/test'
+    exp_name = 'test'
+    pickle_name = f'diff_{exp_name}.pkl'
 
-
+    # One may choose to enable difference depth list for different purpose
     scaling_list = [0.5, 1.0]
     init_list = ['iid', 'smooth']
-   #depth_list = np.linspace(10, 1000, num=10, dtype=int)
-    depth_list = [125, 250, 500, 1000, 2000, 4000]
-    #depth_list = [20, 40, 80]
+    #depth_list = np.linspace(10, 1000, num=10, dtype=int)
+    #depth_list = [125, 250, 500, 1000, 2000, 4000]
+    depth_list = [20, 40, 80]
     #depth_list = [20]
-    resume = False
+
+
+    resume = False # if set true, will be only plotting the result of previous
+                   # experiment
+
     if not resume:
         results_ODE = run_test1(
             model_config, depth_list, scaling_list, 
@@ -248,8 +284,6 @@ if __name__ == "__main__":
         print("Start plotting...")
         plot_results(results_ODE, scaling_list, init_list,
                      filepath_figures, exp_name)
-        #plot_results(results_ODE, filepath)
-        print("Experiment Done!")
     
     else:
         print('Start resuming previous experiment...')
@@ -258,3 +292,5 @@ if __name__ == "__main__":
         print("Start plotting...")
         plot_results(results, scaling_list, init_list,
                      filepath_figures, exp_name)
+        
+    print("Experiment Done!")
