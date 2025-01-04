@@ -8,8 +8,7 @@ from torch import nn
 import utils
 
 
-def create_linear_layers_rbf(
-        depth: int, width: int, bandwidth: float) -> nn.Sequential:
+def create_linear_layers_rbf(depth: int, width: int, bandwidth: float) -> nn.Sequential:
     """Initialize the weights of a sequence of layers of fixed width as
     discretizations of a smooth Gaussian process with rbf kernel.
 
@@ -21,16 +20,17 @@ def create_linear_layers_rbf(
     mean = [0] * (depth + 1)
     cov_matrix = utils.cov_matrix_for_rbf_kernel(depth, bandwidth)
     weights = np.random.default_rng().multivariate_normal(
-        mean, cov_matrix, (width, width)) / np.sqrt(width)
-    layers = [
-        nn.Linear(width, width, bias=False) for _ in range(depth)]
+        mean, cov_matrix, (width, width)
+    ) / np.sqrt(width)
+    layers = [nn.Linear(width, width, bias=False) for _ in range(depth)]
     for k in range(depth):
         layers[k].weight = torch.nn.Parameter(torch.Tensor(weights[:, :, k]))
     return nn.Sequential(*layers)
 
 
 def create_linear_layers_fbm(
-        depth: int, width: int, hurst_index: float) -> nn.Sequential:
+    depth: int, width: int, hurst_index: float
+) -> nn.Sequential:
     """Initialize the weights of a sequence of layers of fixed width as
     increments of a fractional Brownian motion.
 
@@ -43,17 +43,22 @@ def create_linear_layers_fbm(
     for i in range(width):
         for j in range(width):
             weights[:, i, j] = torch.Tensor(
-                utils.generate_fbm(depth, hurst_index)[1] / np.sqrt(
-                    width))
+                utils.generate_fbm(depth, hurst_index)[1] / np.sqrt(width)
+            )
     layers = [nn.Linear(width, width) for _ in range(depth)]
     for k in range(depth):
         layers[k].weight = torch.nn.Parameter(weights[k])
-        layers[k].bias = torch.nn.Parameter(torch.zeros(width,))
+        layers[k].bias = torch.nn.Parameter(
+            torch.zeros(
+                width,
+            )
+        )
     return nn.Sequential(*layers)
 
 
 def create_linear_layer(
-        in_features: int, out_features:int, bias: bool = True) -> nn.Linear:
+    in_features: int, out_features: int, bias: bool = True
+) -> nn.Linear:
     """Initialize one linear layer with a normal distribution of
     variance 1 / in_features
 
@@ -64,16 +69,20 @@ def create_linear_layer(
     """
     layer = nn.Linear(in_features, out_features, bias=bias)
     layer.weight = nn.Parameter(
-        torch.randn(out_features, in_features) / np.sqrt(in_features))
+        torch.randn(out_features, in_features) / np.sqrt(in_features)
+    )
     if bias:
         layer.bias = nn.Parameter(
-            torch.randn(out_features,) / np.sqrt(in_features)) 
+            torch.randn(
+                out_features,
+            )
+            / np.sqrt(in_features)
+        )
     return layer
 
 
 class ResNet(pl.LightningModule, ABC):
-    def __init__(self, first_coord: int, final_width:int,
-                 **model_config: dict):
+    def __init__(self, first_coord: int, final_width: int, **model_config: dict):
         """General class of residual neural network
 
         :param first_coord: size of the input data
@@ -85,34 +94,32 @@ class ResNet(pl.LightningModule, ABC):
         self.initial_width = first_coord
         self.final_width = final_width
         self.model_config = model_config
-        self.width = model_config['width']
-        self.depth = model_config['depth']
-        self.activation = getattr(nn, model_config['activation'])()
+        self.width = model_config["width"]
+        self.depth = model_config["depth"]
+        self.activation = getattr(nn, model_config["activation"])()
 
         self.scaling_weight = torch.full(
-            (self.depth,), 1 / (
-                    float(self.depth) ** model_config['scaling']))
+            (self.depth,), 1 / (float(self.depth) ** model_config["scaling"])
+        )
 
         # Uniform initialization on [-sqrt(3/width), sqrt(3/width)]
-        self.init = create_linear_layer(
-            self.initial_width, self.width, bias=False)
-        self.final = create_linear_layer(
-            self.width, self.final_width, bias=False)
+        self.init = create_linear_layer(self.initial_width, self.width, bias=False)
+        self.final = create_linear_layer(self.width, self.final_width, bias=False)
 
         self.loss = nn.CrossEntropyLoss()
 
     def reset_scaling(self, scaling: float):
-        """ Reset the scaling parameter as 1/depth ** scaling
+        """Reset the scaling parameter as 1/depth ** scaling
 
         :param scaling: new value for the scaling parameter
         :return:
         """
-        self.scaling_weight = torch.full((self.depth,),
-                                         1 / (float(self.depth) ** scaling))
+        self.scaling_weight = torch.full(
+            (self.depth,), 1 / (float(self.depth) ** scaling)
+        )
 
     @abstractmethod
-    def forward_hidden_state(self, hidden_state):
-        ...
+    def forward_hidden_state(self, hidden_state): ...
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         hidden_state = self.init(x)
@@ -130,15 +137,16 @@ class ResNet(pl.LightningModule, ABC):
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(
             filter(lambda p: p.requires_grad, self.parameters()),
-            lr=self.model_config['lr'])
+            lr=self.model_config["lr"],
+        )
         scheduler = torch.optim.lr_scheduler.StepLR(
-            optimizer, self.model_config['step_lr'])
+            optimizer, self.model_config["step_lr"]
+        )
         return {"optimizer": optimizer, "lr_scheduler": {"scheduler": scheduler}}
 
 
 class SimpleResNet(ResNet):
-    def __init__(
-            self, first_coord: int, final_width:int, **model_config: dict):
+    def __init__(self, first_coord: int, final_width: int, **model_config: dict):
         """Residual neural network, subclass of ResNet where the weights can
         be initialized as discretizations of stochastic processes and the
         update function consists of a non-linearity and one matrix
@@ -150,20 +158,25 @@ class SimpleResNet(ResNet):
         """
         super().__init__(first_coord, final_width, **model_config)
 
-        if model_config['regularity']['type'] == 'iid':
+        if model_config["regularity"]["type"] == "iid":
             self.outer_weights = nn.Sequential(
-                *[create_linear_layer(self.width, self.width, bias=False)
-                  for _ in range(self.depth)])
-        elif model_config['regularity']['type'] == 'fbm':
+                *[
+                    create_linear_layer(self.width, self.width, bias=False)
+                    for _ in range(self.depth)
+                ]
+            )
+        elif model_config["regularity"]["type"] == "fbm":
             self.outer_weights = create_linear_layers_fbm(
-                self.depth, self.width, model_config['regularity']['value'])
-        elif model_config['regularity']['type'] == 'rbf':
+                self.depth, self.width, model_config["regularity"]["value"]
+            )
+        elif model_config["regularity"]["type"] == "rbf":
             self.outer_weights = create_linear_layers_rbf(
-                self.depth, self.width, model_config['regularity']['value'])
+                self.depth, self.width, model_config["regularity"]["value"]
+            )
         else:
             raise ValueError(
-                "argument regularity['type'] should be one of 'iid', 'fbm', "
-                "'rbf'")
+                "argument regularity['type'] should be one of 'iid', 'fbm', " "'rbf'"
+            )
 
     def forward_hidden_state(self, hidden_state: torch.Tensor) -> torch.Tensor:
         """Function that outputs the last hidden state, useful to compare norms
@@ -172,14 +185,14 @@ class SimpleResNet(ResNet):
         :return: output of the last hidden layer
         """
         for k in range(self.depth):
-            hidden_state = hidden_state + self.scaling_weight[k] * \
-                           self.outer_weights[k](self.activation(hidden_state))
+            hidden_state = hidden_state + self.scaling_weight[k] * self.outer_weights[
+                k
+            ](self.activation(hidden_state))
         return hidden_state
 
 
 class FullResNet(ResNet):
-    def __init__(
-            self, first_coord: int, final_width: int, **model_config: dict):
+    def __init__(self, first_coord: int, final_width: int, **model_config: dict):
         """Residual neural network, subclass of ResNet where the weights can
         be initialized as discretizations of stochastic processes and where we
         add a matrix multiplication in the update function, compared to
@@ -191,30 +204,39 @@ class FullResNet(ResNet):
         """
         super().__init__(first_coord, final_width, **model_config)
 
-        if model_config['regularity']['type'] == 'iid':
+        if model_config["regularity"]["type"] == "iid":
             self.inner_weights = nn.Sequential(
-                *[create_linear_layer(self.width, self.width, bias=False)
-                  for _ in range(self.depth)])
+                *[
+                    create_linear_layer(self.width, self.width, bias=False)
+                    for _ in range(self.depth)
+                ]
+            )
             self.outer_weights = nn.Sequential(
-                *[create_linear_layer(self.width, self.width, bias=False)
-                  for _ in range(self.depth)])
-        elif model_config['regularity']['type'] == 'fbm':
+                *[
+                    create_linear_layer(self.width, self.width, bias=False)
+                    for _ in range(self.depth)
+                ]
+            )
+        elif model_config["regularity"]["type"] == "fbm":
             self.inner_weights = create_linear_layers_fbm(
-                self.depth, self.width, model_config['regularity']['value'])
+                self.depth, self.width, model_config["regularity"]["value"]
+            )
             self.outer_weights = create_linear_layers_fbm(
-                self.depth, self.width, model_config['regularity']['value'])
-        elif model_config['regularity']['type'] == 'rbf':
+                self.depth, self.width, model_config["regularity"]["value"]
+            )
+        elif model_config["regularity"]["type"] == "rbf":
             self.inner_weights = create_linear_layers_rbf(
-                self.depth, self.width, model_config['regularity']['value'])
+                self.depth, self.width, model_config["regularity"]["value"]
+            )
             self.outer_weights = create_linear_layers_rbf(
-                self.depth, self.width, model_config['regularity']['value'])
+                self.depth, self.width, model_config["regularity"]["value"]
+            )
         else:
             raise ValueError(
-                "argument regularity['type'] should be one of 'iid', 'fbm', "
-                "'rbf'")
+                "argument regularity['type'] should be one of 'iid', 'fbm', " "'rbf'"
+            )
 
-        self.final = create_linear_layer(
-            self.width, self.final_width, bias=False)
+        self.final = create_linear_layer(self.width, self.final_width, bias=False)
 
         self.loss = nn.CrossEntropyLoss()
 
@@ -226,9 +248,9 @@ class FullResNet(ResNet):
         """
         for k in range(self.depth):
             hidden_state = hidden_state + (
-                    self.scaling_weight[k] *
-                    self.outer_weights[k](
-                        self.activation(self.inner_weights[k](hidden_state))
-                    )
+                self.scaling_weight[k]
+                * self.outer_weights[k](
+                    self.activation(self.inner_weights[k](hidden_state))
+                )
             )
         return hidden_state
