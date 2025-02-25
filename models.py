@@ -8,13 +8,16 @@ from torch import nn
 import utils
 
 
-def create_linear_layers_rbf(depth: int, width: int, bandwidth: float) -> nn.Sequential:
+def create_linear_layers_rbf(
+    depth: int, width: int, bandwidth: float, bias: bool
+) -> nn.Sequential:
     """Initialize the weights of a sequence of layers of fixed width as
     discretizations of a smooth Gaussian process with rbf kernel.
 
     :param depth: depth of the ResNet
     :param width: width of the layers
-    :param regularity: variance of the rbf kernel
+    :param bandwidth: variance of the rbf kernel
+    :param bias: if True, learns a bias term initialized to zero
     :return: initialized layers of the ResNet as a nn.Sequential object
     """
     mean = [0] * (depth + 1)
@@ -22,14 +25,16 @@ def create_linear_layers_rbf(depth: int, width: int, bandwidth: float) -> nn.Seq
     weights = np.random.default_rng().multivariate_normal(
         mean, cov_matrix, (width, width)
     ) / np.sqrt(width)
-    layers = [nn.Linear(width, width, bias=False) for _ in range(depth)]
+    layers = [nn.Linear(width, width, bias=bias) for _ in range(depth)]
     for k in range(depth):
         layers[k].weight = torch.nn.Parameter(torch.Tensor(weights[:, :, k]))
+        if bias:
+            layers[k].bias = torch.nn.Parameter(torch.zeros_like(layers[k].bias))
     return nn.Sequential(*layers)
 
 
 def create_linear_layers_fbm(
-    depth: int, width: int, hurst_index: float
+    depth: int, width: int, hurst_index: float, bias: bool
 ) -> nn.Sequential:
     """Initialize the weights of a sequence of layers of fixed width as
     increments of a fractional Brownian motion.
@@ -37,6 +42,7 @@ def create_linear_layers_fbm(
     :param depth: depth of the ResNet
     :param width: width of the layers
     :param hurst_index: Hurst index of the fractional Brownian motion
+    :param bias: if True, learns a bias term initialized to zero
     :return: initialized layers of the ResNet as a nn.Sequential object
     """
     weights = torch.zeros(depth, width, width)
@@ -45,26 +51,21 @@ def create_linear_layers_fbm(
             weights[:, i, j] = torch.Tensor(
                 utils.generate_fbm(depth, hurst_index)[1] / np.sqrt(width)
             )
-    layers = [nn.Linear(width, width) for _ in range(depth)]
+    layers = [nn.Linear(width, width, bias=bias) for _ in range(depth)]
     for k in range(depth):
         layers[k].weight = torch.nn.Parameter(weights[k])
-        layers[k].bias = torch.nn.Parameter(
-            torch.zeros(
-                width,
-            )
-        )
+        if bias:
+            layers[k].bias = torch.nn.Parameter(torch.zeros_like(layers[k].bias))
     return nn.Sequential(*layers)
 
 
-def create_linear_layer(
-    in_features: int, out_features: int, bias: bool = True
-) -> nn.Linear:
+def create_linear_layer(in_features: int, out_features: int, bias: bool) -> nn.Linear:
     """Initialize one linear layer with a normal distribution of
     variance 1 / in_features
 
     :param in_features: size of the input to the layer
     :param out_features: size of the output of the layer
-    :param bias: whether to include a bias
+    :param bias: if True, learns a bias term initialized to zero
     :return:
     """
     layer = nn.Linear(in_features, out_features, bias=bias)
@@ -72,12 +73,7 @@ def create_linear_layer(
         torch.randn(out_features, in_features) / np.sqrt(in_features)
     )
     if bias:
-        layer.bias = nn.Parameter(
-            torch.randn(
-                out_features,
-            )
-            / np.sqrt(in_features)
-        )
+        layer.bias = torch.nn.Parameter(torch.zeros_like(layer.bias))
     return layer
 
 
@@ -97,6 +93,10 @@ class ResNet(pl.LightningModule, ABC):
         self.width = model_config["width"]
         self.depth = model_config["depth"]
         self.activation = getattr(nn, model_config["activation"])()
+        if "bias" in model_config:
+            self.bias = model_config["bias"]
+        else:
+            self.bias = False
 
         self.scaling_weight = torch.full(
             (self.depth,), 1 / (float(self.depth) ** model_config["scaling"])
@@ -161,17 +161,17 @@ class SimpleResNet(ResNet):
         if model_config["regularity"]["type"] == "iid":
             self.outer_weights = nn.Sequential(
                 *[
-                    create_linear_layer(self.width, self.width, bias=False)
+                    create_linear_layer(self.width, self.width, bias=self.bias)
                     for _ in range(self.depth)
                 ]
             )
         elif model_config["regularity"]["type"] == "fbm":
             self.outer_weights = create_linear_layers_fbm(
-                self.depth, self.width, model_config["regularity"]["value"]
+                self.depth, self.width, model_config["regularity"]["value"], self.bias
             )
         elif model_config["regularity"]["type"] == "rbf":
             self.outer_weights = create_linear_layers_rbf(
-                self.depth, self.width, model_config["regularity"]["value"]
+                self.depth, self.width, model_config["regularity"]["value"], self.bias
             )
         else:
             raise ValueError(
@@ -191,6 +191,59 @@ class SimpleResNet(ResNet):
         return hidden_state
 
 
+class InnerWeightsResNet(ResNet):
+    def __init__(self, first_coord: int, final_width: int, **model_config: dict):
+        """Residual neural network, subclass of ResNet where the weights can
+        be initialized as discretizations of stochastic processes and the
+        update function consists of a matrix multiplication, then a non-linearity.
+        Note that this formulation does not follow the theoretical framework of the
+        paper because there is no matrix outside the nonlinearity.
+
+        :param first_coord: size of the input data
+        :param final_width: size of the output
+        :param model_config: configuration dictionary with hyperparameters
+        """
+        super().__init__(first_coord, final_width, **model_config)
+
+        if model_config["regularity"]["type"] == "iid":
+            self.inner_weights = nn.Sequential(
+                *[
+                    create_linear_layer(self.width, self.width, bias=self.bias)
+                    for _ in range(self.depth)
+                ]
+            )
+        elif model_config["regularity"]["type"] == "fbm":
+            self.inner_weights = create_linear_layers_fbm(
+                self.depth,
+                self.width,
+                model_config["regularity"]["value"],
+                bias=self.bias,
+            )
+        elif model_config["regularity"]["type"] == "rbf":
+            self.inner_weights = create_linear_layers_rbf(
+                self.depth,
+                self.width,
+                model_config["regularity"]["value"],
+                bias=self.bias,
+            )
+        else:
+            raise ValueError(
+                "argument regularity['type'] should be one of 'iid', 'fbm', " "'rbf'"
+            )
+
+    def forward_hidden_state(self, hidden_state: torch.Tensor) -> torch.Tensor:
+        """Function that outputs the last hidden state, useful to compare norms
+
+        :param hidden_state: output of the initial layer
+        :return: output of the last hidden layer
+        """
+        for k in range(self.depth):
+            hidden_state = hidden_state + self.scaling_weight[k] * self.activation(
+                self.inner_weights[k](hidden_state)
+            )
+        return hidden_state
+
+
 class FullResNet(ResNet):
     def __init__(self, first_coord: int, final_width: int, **model_config: dict):
         """Residual neural network, subclass of ResNet where the weights can
@@ -207,29 +260,41 @@ class FullResNet(ResNet):
         if model_config["regularity"]["type"] == "iid":
             self.inner_weights = nn.Sequential(
                 *[
-                    create_linear_layer(self.width, self.width, bias=False)
+                    create_linear_layer(self.width, self.width, bias=self.bias)
                     for _ in range(self.depth)
                 ]
             )
             self.outer_weights = nn.Sequential(
                 *[
-                    create_linear_layer(self.width, self.width, bias=False)
+                    create_linear_layer(self.width, self.width, bias=self.bias)
                     for _ in range(self.depth)
                 ]
             )
         elif model_config["regularity"]["type"] == "fbm":
             self.inner_weights = create_linear_layers_fbm(
-                self.depth, self.width, model_config["regularity"]["value"]
+                self.depth,
+                self.width,
+                model_config["regularity"]["value"],
+                bias=self.bias,
             )
             self.outer_weights = create_linear_layers_fbm(
-                self.depth, self.width, model_config["regularity"]["value"]
+                self.depth,
+                self.width,
+                model_config["regularity"]["value"],
+                bias=self.bias,
             )
         elif model_config["regularity"]["type"] == "rbf":
             self.inner_weights = create_linear_layers_rbf(
-                self.depth, self.width, model_config["regularity"]["value"]
+                self.depth,
+                self.width,
+                model_config["regularity"]["value"],
+                bias=self.bias,
             )
             self.outer_weights = create_linear_layers_rbf(
-                self.depth, self.width, model_config["regularity"]["value"]
+                self.depth,
+                self.width,
+                model_config["regularity"]["value"],
+                bias=self.bias,
             )
         else:
             raise ValueError(

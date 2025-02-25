@@ -42,6 +42,7 @@ def run_experiment(exp_config: dict, filepath: Optional[str] = "figures"):
     )
 
     plt.plot(weight_example)
+    plt.ylim([-1.5, 1.5])
     plt.savefig(
         os.path.join(
             filepath,
@@ -63,7 +64,15 @@ if __name__ == "__main__":
         {"scaling": 1, "regularity": {"type": "iid"}},
         {"scaling": 0.5, "regularity": {"type": "iid"}},
     ]
-    filepath = "figures/weights_after_training"
+    filepath = "figures/weights_after_training/no-bias"
+    os.makedirs(filepath, exist_ok=True)
+    for scaling_reg in grid_scaling_reg:
+        exp_config["model-config"]["scaling"] = scaling_reg["scaling"]
+        exp_config["model-config"]["regularity"] = scaling_reg["regularity"]
+        run_experiment(exp_config, filepath)
+
+    exp_config = config.weights_after_training_with_bias
+    filepath = "figures/weights_after_training/with-bias"
     os.makedirs(filepath, exist_ok=True)
     for scaling_reg in grid_scaling_reg:
         exp_config["model-config"]["scaling"] = scaling_reg["scaling"]

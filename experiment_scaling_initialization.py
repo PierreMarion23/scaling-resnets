@@ -208,3 +208,33 @@ if __name__ == "__main__":
     grid_scaling = [2.0, 0.5, 1.0]
     results_smooth = run_experiment(config_smooth, grid_scaling, grid_depth)
     plot_results(results_smooth, grid_scaling, filepath)
+
+    # Experiment with i.i.d. initialization - inner weights only
+    config_iid = config.scaling_initialization_exp_iid_inner_weights_only
+    filepath = "figures/scaling_initialization/iid-inner-only"
+    os.makedirs(filepath, exist_ok=True)
+
+    grid_depth = np.linspace(10, 1e3, num=10, dtype=int)
+    grid_scaling = [1.0, 0.25, 0.5]
+
+    results_iid = run_experiment(config_iid, grid_scaling, grid_depth)
+
+    plot_results(results_iid, grid_scaling, filepath)
+
+    # Distribution of norms for i.i.d. initialization - inner weights only
+    config_hist = config.histogram_initialization_exp_inner_weights_only
+    results_hist = run_experiment(
+        config_hist,
+        [config_hist["model-config"]["scaling"]],
+        [config_hist["model-config"]["depth"]],
+    )
+    plot_histogram(results_hist, filepath)
+
+    # Experiment with smooth initialization - inner weights only
+    config_smooth = config.scaling_initialization_exp_smooth_inner_weights_only
+    filepath = "figures/scaling_initialization/smooth-inner-only"
+    os.makedirs(filepath, exist_ok=True)
+
+    grid_scaling = [2.0, 0.5, 1.0]
+    results_smooth = run_experiment(config_smooth, grid_scaling, grid_depth)
+    plot_results(results_smooth, grid_scaling, filepath)

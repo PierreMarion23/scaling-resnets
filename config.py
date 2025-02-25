@@ -35,6 +35,43 @@ histogram_initialization_exp = {
     "nb_classes": 1,
 }
 
+scaling_initialization_exp_iid_inner_weights_only = {
+    "name": "scaling_initialization_exp",
+    "model": "InnerWeightsResNet",
+    "model-config": {"width": 40, "activation": "ReLU", "regularity": {"type": "iid"}},
+    "niter": 50,
+    "dim_input": 64,
+    "nb_classes": 1,
+}
+
+scaling_initialization_exp_smooth_inner_weights_only = {
+    "name": "scaling_initialization_exp",
+    "model": "InnerWeightsResNet",
+    "model-config": {
+        "width": 40,
+        "activation": "ReLU",
+        "regularity": {"type": "rbf", "value": 0.1},
+    },
+    "niter": 50,
+    "dim_input": 64,
+    "nb_classes": 1,
+}
+
+histogram_initialization_exp_inner_weights_only = {
+    "name": "histogram_initialization_exp",
+    "model": "InnerWeightsResNet",
+    "model-config": {
+        "width": 100,
+        "depth": 10**3,
+        "scaling": 0.5,
+        "activation": "ReLU",
+        "regularity": {"type": "iid"},
+    },
+    "niter": 10**4,
+    "dim_input": 64,
+    "nb_classes": 1,
+}
+
 scaling_regularity_initialization_exp = {
     "name": "scaling_regularity_initialization_exp",
     "model": "FullResnet",
@@ -66,6 +103,22 @@ weights_after_training = {
     "n_workers": 5,
 }
 
+weights_after_training_with_bias = {
+    "name": "weights-after-training",
+    "model": "SimpleResNet",
+    "dataset": "MNIST",
+    "model-config": {
+        "width": 30,
+        "depth": 1000,
+        "activation": "ReLU",  # 'ReLU' or 'Tanh'
+        "lr": 0.01,
+        "step_lr": 1000,
+        "bias": True,
+    },
+    "epochs": 10,
+    "n_workers": 5,
+}
+
 perf_weights_regularity = {
     "name": "perf-weights-regularity-dataset",
     "model": "SimpleResNet",
@@ -78,6 +131,7 @@ perf_weights_regularity = {
         "regularity": {"type": "fbm", "value": 0.5},
         "lr": 0.001,
         "step_lr": 5,
+        "bias": True,
     },
     "epochs": 10,
     "n_workers": 5,
